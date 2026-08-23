@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { repository } from "./repositories";
+import { RepositoryError } from "./repository";
 import { todayIso } from "./dates";
 import { STARTED_STAGES, TERMINAL_STAGES, columnById } from "./constants";
 import type {
@@ -53,12 +54,21 @@ export function statusForDrop(item: WorkItem, columnId: string): Status {
   return column.statuses.includes(item.status) ? item.status : column.primary;
 }
 
+const describe = (e: unknown, fallback: string) =>
+  e instanceof RepositoryError
+    ? [e.message, e.hint].filter(Boolean).join(" ")
+    : e instanceof Error
+      ? e.message
+      : fallback;
+
 interface TrackerState {
   items: WorkItem[];
   loading: boolean;
   sync: SyncState;
   lastSyncedAt: string | null;
   error: string | null;
+  /** Rows the importer could not read cleanly. Shown once after a load. */
+  warnings: string[];
 
   filters: Filters;
   groupBy: GroupBy;
@@ -66,7 +76,9 @@ interface TrackerState {
   composerOpen: boolean;
 
   load: () => Promise<void>;
-  createItem: (input: NewWorkItem) => Promise<WorkItem>;
+  /** Background poll — no spinner, and it yields to work in progress. */
+  refresh: () => Promise<void>;
+  createItem: (input: NewWorkItem) => Promise<WorkItem | null>;
   patchItem: (id: string, patch: Partial<WorkItem>) => Promise<void>;
   moveItem: (
     id: string,
@@ -82,6 +94,7 @@ interface TrackerState {
   setGroupBy: (g: GroupBy) => void;
   select: (id: string | null) => void;
   setComposerOpen: (open: boolean) => void;
+  dismissWarnings: () => void;
 }
 
 export const useTracker = create<TrackerState>((set, get) => ({
@@ -90,6 +103,7 @@ export const useTracker = create<TrackerState>((set, get) => ({
   sync: "idle",
   lastSyncedAt: null,
   error: null,
+  warnings: [],
 
   filters: EMPTY_FILTERS,
   groupBy: "none",
@@ -99,9 +113,10 @@ export const useTracker = create<TrackerState>((set, get) => ({
   async load() {
     set({ loading: true, sync: "syncing" });
     try {
-      const items = await repository.list();
+      const { items, warnings } = await repository.list();
       set({
         items,
+        warnings: warnings ?? [],
         loading: false,
         sync: "synced",
         lastSyncedAt: new Date().toISOString(),
@@ -111,35 +126,63 @@ export const useTracker = create<TrackerState>((set, get) => ({
       set({
         loading: false,
         sync: "error",
-        error: e instanceof Error ? e.message : "Could not load the board",
+        error: describe(e, "Could not load the board"),
       });
+    }
+  },
+
+  async refresh() {
+    // Never poll over the top of a write in flight, or over a card someone
+    // has open — reloading underneath an open editor loses their typing.
+    const { sync, selectedId, composerOpen } = get();
+    if (sync === "syncing" || selectedId || composerOpen) return;
+    try {
+      const { items, warnings } = await repository.list();
+      set({
+        items,
+        warnings: warnings ?? [],
+        lastSyncedAt: new Date().toISOString(),
+        sync: "synced",
+        error: null,
+      });
+    } catch {
+      // A failed background poll is not worth interrupting anyone over;
+      // the next real write will surface the problem properly.
     }
   },
 
   async createItem(input) {
     const items = get().items;
-    const ref = items.reduce((max, i) => Math.max(max, i.ref), 0) + 1;
-    const item: WorkItem = {
+    const localRef = items.reduce((max, i) => Math.max(max, i.ref), 0) + 1;
+    const optimistic: WorkItem = {
       ...input,
-      id: `wi-${ref}-${Date.now().toString(36)}`,
-      ref,
+      id: `pending-${localRef}-${Date.now().toString(36)}`,
+      ref: localRef,
       createdDate: input.createdDate ?? todayIso(),
       order: -1, // newest sits at the top of its column
       updatedAt: new Date().toISOString(),
     };
 
-    set({ items: [...items, item], sync: "syncing" });
+    set({ items: [...items, optimistic], sync: "syncing" });
     try {
-      await repository.create(item);
-      set({ sync: "synced", lastSyncedAt: new Date().toISOString() });
+      // The backend owns the real reference: two people adding at once must
+      // not both claim MON-15, so the optimistic row is swapped for the
+      // saved one rather than kept.
+      const saved = await repository.create(optimistic);
+      set({
+        items: get().items.map((i) => (i.id === optimistic.id ? saved : i)),
+        sync: "synced",
+        lastSyncedAt: new Date().toISOString(),
+      });
+      return saved;
     } catch (e) {
       set({
         items,
         sync: "error",
-        error: e instanceof Error ? e.message : "Could not save the work item",
+        error: describe(e, "Could not save the work item"),
       });
+      return null;
     }
-    return item;
   },
 
   async patchItem(id, patch) {
@@ -152,22 +195,29 @@ export const useTracker = create<TrackerState>((set, get) => ({
         ? stampDates(current, patch.status)
         : {}),
       ...patch,
-      updatedAt: new Date().toISOString(),
     };
 
     set({
-      items: previous.map((i) => (i.id === id ? { ...i, ...full } : i)),
+      items: previous.map((i) =>
+        i.id === id
+          ? { ...i, ...full, updatedAt: new Date().toISOString() }
+          : i,
+      ),
       sync: "syncing",
     });
+
     try {
-      await repository.update(id, full);
-      set({ sync: "synced", lastSyncedAt: new Date().toISOString() });
-    } catch (e) {
+      const saved = await repository.update(id, full, current.updatedAt);
       set({
-        items: previous,
-        sync: "error",
-        error: e instanceof Error ? e.message : "Could not save the change",
+        items: get().items.map((i) => (i.id === id ? saved : i)),
+        sync: "synced",
+        lastSyncedAt: new Date().toISOString(),
       });
+    } catch (e) {
+      set({ items: previous, sync: "error", error: describe(e, "Could not save") });
+      // Someone else got there first — take their version rather than
+      // leaving two people looking at different boards.
+      if (e instanceof RepositoryError && e.isConflict) await get().load();
     }
   },
 
@@ -189,10 +239,7 @@ export const useTracker = create<TrackerState>((set, get) => ({
     // renumber that column so the order is dense and stable.
     const column = columnById(columnId);
     const peers = previous
-      .filter(
-        (i) =>
-          i.id !== id && !!column && column.statuses.includes(i.status),
-      )
+      .filter((i) => i.id !== id && !!column && column.statuses.includes(i.status))
       .sort(byOrder);
     const reseated = [...peers];
     reseated.splice(index, 0, { ...moving, ...patch } as WorkItem);
@@ -213,14 +260,28 @@ export const useTracker = create<TrackerState>((set, get) => ({
 
     set({ items: next, sync: "syncing" });
     try {
-      await repository.saveAll(next);
-      set({ sync: "synced", lastSyncedAt: new Date().toISOString() });
+      const moved = next.find((i) => i.id === id)!;
+      // Two writes on purpose. The status and stamped dates belong to this
+      // row; the ordering belongs to the whole column. saveAll only touches
+      // the order column, so without the update the status would be lost.
+      const saved = await repository.update(
+        id,
+        { ...patch, order: moved.order },
+        moving.updatedAt,
+      );
+      await repository.saveAll(next.filter((i) => orderById.has(i.id)));
+      set({
+        items: get().items.map((i) => (i.id === id ? saved : i)),
+        sync: "synced",
+        lastSyncedAt: new Date().toISOString(),
+      });
     } catch (e) {
       set({
         items: previous,
         sync: "error",
-        error: e instanceof Error ? e.message : "Could not move the work item",
+        error: describe(e, "Could not move the work item"),
       });
+      if (e instanceof RepositoryError && e.isConflict) await get().load();
     }
   },
 
@@ -238,15 +299,19 @@ export const useTracker = create<TrackerState>((set, get) => ({
       set({
         items: previous,
         sync: "error",
-        error: e instanceof Error ? e.message : "Could not delete the item",
+        error: describe(e, "Could not delete the item"),
       });
     }
   },
 
   async resetBoard() {
     set({ sync: "syncing" });
-    const items = await repository.reset();
-    set({ items, sync: "synced", lastSyncedAt: new Date().toISOString() });
+    try {
+      const { items } = await repository.reset();
+      set({ items, sync: "synced", lastSyncedAt: new Date().toISOString() });
+    } catch (e) {
+      set({ sync: "error", error: describe(e, "Could not clear the board") });
+    }
   },
 
   setFilters(patch) {
@@ -263,6 +328,9 @@ export const useTracker = create<TrackerState>((set, get) => ({
   },
   setComposerOpen(composerOpen) {
     set({ composerOpen });
+  },
+  dismissWarnings() {
+    set({ warnings: [] });
   },
 }));
 
@@ -281,7 +349,7 @@ export function applyFilters(items: WorkItem[], f: Filters): WorkItem[] {
       if (!i.type || !f.types.includes(i.type)) return false;
     }
     if (q) {
-      const hay = `${i.title} ${i.description} MON-${i.ref}`.toLowerCase();
+      const hay = `${i.title} ${i.description} ${i.id}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;

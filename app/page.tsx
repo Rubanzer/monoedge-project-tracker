@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { TopBar } from "@/components/layout/top-bar";
 import { FilterBar, type View } from "@/components/layout/filter-bar";
@@ -12,6 +12,7 @@ import { NewWorkItemDialog } from "@/components/work-item/new-work-item-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { COLUMNS, type BoardColumnDef } from "@/lib/constants";
+import { repository } from "@/lib/repositories";
 import { applyFilters, statusForDrop, useTracker } from "@/lib/store";
 import type { Status } from "@/lib/types";
 
@@ -21,11 +22,14 @@ export default function TrackerPage() {
     loading,
     sync,
     lastSyncedAt,
+    error,
+    warnings,
     filters,
     groupBy,
     selectedId,
     composerOpen,
     load,
+    refresh,
     createItem,
     patchItem,
     moveItem,
@@ -36,6 +40,7 @@ export default function TrackerPage() {
     setGroupBy,
     select,
     setComposerOpen,
+    dismissWarnings,
   } = useTracker();
 
   const [view, setView] = useState<View>("board");
@@ -48,6 +53,39 @@ export default function TrackerPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Poll a shared backend so edits made by someone else — or straight in the
+  // sheet — appear without a manual reload. Paused while the tab is hidden,
+  // because five idle laptops polling all day is the fastest way to spend
+  // the rate limit on nothing.
+  useEffect(() => {
+    if (!repository.remote) return;
+    const tick = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    const timer = setInterval(tick, 25_000);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [refresh]);
+
+  // Import problems are reported once rather than on every poll.
+  const reported = useRef("");
+  useEffect(() => {
+    const signature = warnings.join("|");
+    if (!warnings.length || signature === reported.current) return;
+    reported.current = signature;
+    toast.warning(
+      `${warnings.length} row${warnings.length === 1 ? "" : "s"} needed guessing`,
+      {
+        description: warnings.slice(0, 4).join(" · "),
+        duration: 12_000,
+        action: { label: "Dismiss", onClick: dismissWarnings },
+      },
+    );
+  }, [warnings, dismissWarnings]);
 
   const visible = useMemo(() => applyFilters(items, filters), [items, filters]);
   const selected = items.find((i) => i.id === selectedId) ?? null;
@@ -67,6 +105,7 @@ export default function TrackerPage() {
         onQuery={(query) => setFilters({ query })}
         sync={sync}
         lastSyncedAt={lastSyncedAt}
+        error={error}
         onRefresh={() => void load()}
         onClear={() => {
           void resetBoard();

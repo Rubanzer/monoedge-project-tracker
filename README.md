@@ -3,16 +3,18 @@
 A Kanban board for Monoedge project work, built to sit on top of the team
 tracking sheet. Four columns, drag to move, assign to anyone on the team.
 
-**Status: frontend complete, backend not connected.** The board starts empty
-and everything runs against a browser-local adapter, so nothing is shared
-between people yet. That lands with the Google Sheets adapter.
+**Status: the Google Sheets adapter is built and waiting on credentials.**
+Set the environment variables in [Connecting the Google Sheet](#connecting-the-google-sheet)
+and the board reads and writes the tracking sheet for the whole team. Until
+then it falls back to a browser-local draft, which is per-person and shared
+with nobody.
 
-Work items live in `localStorage` under `monoedge.tracker.items.v2`. Because
-that survives a code change, **bump the key in
+The local draft lives in `localStorage` under `monoedge.tracker.items.v2`.
+Because that survives a code change, **bump the key in
 [`lib/repositories/local.ts`](lib/repositories/local.ts) and add the old one to
 `DEAD_KEYS` whenever the shape of a `WorkItem` changes** — otherwise everyone
 who loaded an earlier build keeps seeing stale rows the code no longer knows
-about. To wipe the board by hand, use **Clear board** in the sync pill menu.
+about. To wipe it by hand, use **Clear board** in the sync pill menu.
 
 ```bash
 npm run dev
@@ -96,74 +98,122 @@ the sheet's Primary Person column, so keep it stable once work is assigned.
 
 ## Connecting the Google Sheet
 
-The UI talks to one interface and nothing else. Implement it once and the whole
-app switches over.
+The adapter is built. It needs credentials and one environment flag, and it
+adapts to the sheet rather than the other way round: the existing dropdown
+values are accepted as-is, and the columns it needs are created on first
+connect. **No manual preparation of the sheet is required.**
 
-### 1. Column mapping
+### 1. Create a service account
 
-Already fixed in [`lib/types.ts`](lib/types.ts) — each `WorkItem` field is
-annotated with its column letter:
+1. In the [Google Cloud console](https://console.cloud.google.com), create (or
+   pick) a project.
+2. **APIs & Services → Library → Google Sheets API → Enable.**
+3. **IAM & Admin → Service Accounts → Create service account.** No roles are
+   needed; access is granted by sharing the sheet, not by IAM.
+4. On the account, **Keys → Add key → Create new key → JSON.** Keep the file
+   somewhere safe; it is the only copy.
 
-| Sheet column | Field |
+### 2. Share the sheet with it
+
+Open the tracking sheet, **Share**, and add the service account's
+`client_email` (it looks like `something@project.iam.gserviceaccount.com`) as
+an **Editor**.
+
+> Google Workspace often blocks sharing outside the organisation by default.
+> If the address is rejected, an admin has to allow external sharing for this
+> file. Do this step early — it is the one that needs someone else.
+
+### 3. Set four environment variables
+
+In Vercel, **Settings → Environment Variables** (and `.env.local` for local
+work — see [`.env.example`](.env.example)):
+
+| Variable | Value |
 |---|---|
-| A · Tasks | `title` |
-| B · Description | `description` |
-| C · Primary Person | `assigneeId` (a `Member.id`, not a display name) |
-| D · Status | `status` |
-| E · Task Creation Date | `createdDate` |
-| F · Task Started Date | `startedDate` |
-| G · Task Planned Date | `plannedDate` |
-| H · Task Actual Date | `actualDate` |
-| I · Priority | `priority` |
-| J · Functionality / Bug | `type` |
+| `NEXT_PUBLIC_TRACKER_BACKEND` | `sheets` |
+| `GOOGLE_SHEET_ID` | the part of the sheet URL between `/d/` and `/edit` |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | `client_email` from the JSON key |
+| `GOOGLE_PRIVATE_KEY` | `private_key` from the JSON key, pasted whole including the BEGIN and END lines |
+| `GOOGLE_SHEET_TAB` | *optional* — defaults to the first tab |
 
-Dates are ISO `yyyy-mm-dd` in the app and formatted for display only.
+Redeploy. Without `NEXT_PUBLIC_TRACKER_BACKEND=sheets` the app stays on the
+browser-local draft, so a checkout with no credentials still runs.
 
-Two fields have no column yet:
+### 4. Check it
 
-- **`ref`** — the `MON-14` identifier. Assigned on import today, which means it
-  is not stable across reloads once rows move. Worth adding a hidden ID column.
-- **`order`** — position within a board column. Also worth a hidden column,
-  otherwise card order resets to sheet-row order on every load.
+Visit **`/api/sheet/diagnose`** on the deployment. It walks the connection one
+step at a time and names the step that fails, with a fix:
 
-### 2. Write the adapter
-
-Create `lib/repositories/sheets.ts` implementing
-[`TrackerRepository`](lib/repository.ts):
-
-```ts
-list()                  // read the sheet → WorkItem[], setting sheetRow on each
-create(item)            // append a row
-update(id, patch)       // write the changed cells of item.sheetRow
-remove(id)              // delete the row
-saveAll(items)          // batch write — called after a drag reorders a column
-reset()                 // reload
+```json
+{ "ok": true, "checks": [
+  { "step": "Environment variables", "ok": true,  "detail": "..." },
+  { "step": "Private key format",    "ok": true,  "detail": "..." },
+  { "step": "Spreadsheet access",    "ok": true,  "detail": "Reading tab \"Sheet1\"" },
+  { "step": "Managed columns (K–N)", "ok": true,  "detail": "All four present" },
+  { "step": "Read and map rows",     "ok": true,  "detail": "14 work items imported" },
+  { "step": "Row warnings",          "ok": true,  "detail": "None" }
+]}
 ```
 
-`sheetRow` is carried on every item so an update targets the right row rather
-than searching by title.
+It never returns cell contents or any part of the private key.
 
-### 3. Switch it on
+### What the app does to your sheet
 
-One line in [`lib/repositories/index.ts`](lib/repositories/index.ts):
+On first successful load it adds four headers in **K–N** and fills them in.
+Columns **A–J** are never restructured.
 
-```ts
-export const repository: TrackerRepository = sheetsRepository;
+| Column | Header | Why |
+|---|---|---|
+| K | `Item ID` | `MON-7`. Without it, inserting a row shifts every card's identity and edits land on the wrong task |
+| L | `Board Order` | Card position within a column; otherwise order resets to row order on every load |
+| M | `Assignee Key` | The stable member id. Column C keeps the readable name for humans |
+| N | `Updated At` | Used to refuse a write when someone else changed the row first |
+
+Existing rows are given IDs automatically the first time they are seen. You
+can hide K–N in Google Sheets; the app does not care.
+
+### It reads your dropdown as it is
+
+The importer normalises values, so `Testing` maps to `Testing done` and the
+retired `Define Approach` folds into `In Progress`. Casing and spacing are
+ignored. Anything it cannot place is defaulted **and reported** — the app
+raises a toast listing the rows, and `/api/sheet/diagnose` lists them too.
+Nothing is silently mangled. Aliases live in
+[`lib/sheet-mapping.ts`](lib/sheet-mapping.ts).
+
+### How it stays in sync
+
+- The board polls every 25 seconds, only while the tab is visible, and never
+  over a write in flight or a card someone has open.
+- Edits write just the affected row. A drag writes the row plus the order
+  column for that column — never the whole sheet.
+- Before writing, the row's `Updated At` is compared with what the browser
+  last saw. If the sheet moved on, the write is refused with a 409 and the
+  board reloads instead of overwriting the other person.
+
+### Limits worth knowing
+
+- Google allows roughly **60 requests per minute per service account**, and
+  that budget is shared by everyone using the app, because every request is
+  signed by the same account. Five people polling is about 12/minute, so
+  there is headroom — but a tight loop of drags can hit it. The app surfaces
+  a 429 as "Hit Google's rate limit" rather than failing silently.
+- Deleting a work item deletes the sheet row. There is no undo.
+- **Clear board** is hidden when the sheet is connected. It only ever wipes
+  the local draft.
+
+### Verifying the mapping
+
+The row mapping has its own check, because a wrong date epoch is silently
+wrong rather than loudly broken:
+
+```bash
+npm run check:mapping
 ```
 
-The sync pill in the header reads `repository.label` and `repository.remote`,
-so it will start describing the sheet with no other change.
-
-### Still to decide
-
-- **Auth.** A service account with the sheet shared to it is simplest, but the
-  credential has to live in a Vercel env var and every write is then anonymous.
-  OAuth per person costs more setup and gives real attribution.
-- **Concurrent edits.** Five people on one sheet will overwrite each other. The
-  store is optimistic and rolls back on error, but nothing detects a conflict
-  yet. Cheapest fix is to compare `updatedAt` before writing.
-- **Rate limits.** Sheets allows 60 reads/minute per user. A drag currently
-  calls `saveAll`, which rewrites the column. Batch or debounce it.
+42 assertions over the Sheets serial-date epoch, every value in your current
+dropdown, a row shaped exactly like the ones in the sheet today, and a full
+round trip. It needs no credentials.
 
 ---
 
@@ -172,7 +222,9 @@ so it will start describing the sheet with no other change.
 ```
 app/
   layout.tsx              fonts, theme, tooltip and toast providers
-  page.tsx                composes the workspace, owns view state
+  page.tsx                composes the workspace, owns view state and polling
+  api/items/              list, create, update, delete, reorder
+  api/sheet/diagnose/     step-by-step connection check
 components/
   board/                  kanban board, columns, cards, pipeline rail
   sheet-view/             the table
@@ -183,11 +235,20 @@ components/
 lib/
   types.ts                domain model, annotated with sheet columns
   constants.ts            team, columns, statuses, colour tokens
-  store.ts                zustand store — optimistic writes, filters
-  repository.ts           the storage interface
-  repositories/           local adapter now, sheets adapter later
+  store.ts                zustand store — optimistic writes, conflicts, filters
+  repository.ts           the storage interface every adapter implements
+  repositories/           local (browser) and remote (calls /api/items)
+  sheet-mapping.ts        row <-> WorkItem and the alias tables. Pure, testable
+  server/sheets.ts        Sheets REST client. Credentials never leave here
+  server/sheet-store.ts   the Sheets I/O built on top of the mapping
   dates.ts                formatting, overdue and due-soon logic
+scripts/
+  check-mapping.ts        assertions over the mapping — no credentials needed
 ```
+
+The browser never sees the service account. It calls `/api/items`, and those
+route handlers hold the credentials — which is why the Sheets code sits under
+`lib/server/` behind `import "server-only"`.
 
 Colour tokens live in `app/globals.css`. Every chip takes its accent as a `--c`
 custom property and derives fill, text and border from it with `color-mix`, so

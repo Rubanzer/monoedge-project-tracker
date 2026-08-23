@@ -46,7 +46,7 @@ export const localRepository: TrackerRepository = {
   remote: false,
 
   async list() {
-    return settle(read());
+    return settle({ items: read() });
   },
 
   async create(item) {
@@ -74,6 +74,6 @@ export const localRepository: TrackerRepository = {
 
   async reset() {
     write([]);
-    return settle([]);
+    return settle({ items: [] });
   },
 };

@@ -1,10 +1,13 @@
 import type { TrackerRepository } from "../repository";
 import { localRepository } from "./local";
+import { remoteRepository } from "./remote";
 
 /**
- * Swap this for the Sheets-backed adapter when the backend lands:
- *
- *   import { sheetsRepository } from "./sheets";
- *   export const repository: TrackerRepository = sheetsRepository;
+ * Which backend the app talks to. Set NEXT_PUBLIC_TRACKER_BACKEND=sheets in
+ * Vercel once the Google credentials are in place; anything else keeps the
+ * browser-local draft, so a checkout with no credentials still runs.
  */
-export const repository: TrackerRepository = localRepository;
+export const repository: TrackerRepository =
+  process.env.NEXT_PUBLIC_TRACKER_BACKEND === "sheets"
+    ? remoteRepository
+    : localRepository;

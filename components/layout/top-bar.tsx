@@ -2,7 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { Moon, Plus, RefreshCw, Search, Sun, Trash2, X } from "lucide-react";
+import {
+  Moon,
+  Plus,
+  RefreshCw,
+  Search,
+  Sun,
+  Trash2,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,11 +43,13 @@ function Mark() {
 function SyncPill({
   state,
   lastSyncedAt,
+  error,
   onRefresh,
   onClear,
 }: {
   state: SyncState;
   lastSyncedAt: string | null;
+  error: string | null;
   onRefresh: () => void;
   onClear: () => void;
 }) {
@@ -80,24 +91,40 @@ function SyncPill({
           <RefreshCw className="size-3 text-muted-foreground/60 transition-transform group-hover:rotate-90" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
+      <DropdownMenuContent align="end" className="w-72">
         <DropdownMenuLabel className="text-[11px] leading-relaxed font-normal text-muted-foreground">
           {repository.remote
-            ? "Reading from the Google Sheet."
+            ? "Reading and writing the Google Sheet. Changes appear for everyone within about half a minute."
             : "Work items are kept in this browser only. Connect the sheet to share them with the team."}
         </DropdownMenuLabel>
+
+        {error && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="flex gap-1.5 text-[11px] leading-relaxed font-normal text-destructive">
+              <TriangleAlert className="mt-px size-3.5 shrink-0" />
+              <span>{error}</span>
+            </DropdownMenuLabel>
+          </>
+        )}
+
         <DropdownMenuSeparator />
         <DropdownMenuItem className="text-[13px]" onSelect={onRefresh}>
           <RefreshCw className="size-3.5" />
           Reload
         </DropdownMenuItem>
-        <DropdownMenuItem
-          className="text-[13px] text-destructive focus:text-destructive"
-          onSelect={onClear}
-        >
-          <Trash2 className="size-3.5" />
-          Clear board
-        </DropdownMenuItem>
+
+        {/* Clearing a shared sheet from a menu is not a thing anyone should
+            be one misclick away from, so it is local-draft only. */}
+        {!repository.remote && (
+          <DropdownMenuItem
+            className="text-[13px] text-destructive focus:text-destructive"
+            onSelect={onClear}
+          >
+            <Trash2 className="size-3.5" />
+            Clear board
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -127,6 +154,7 @@ export function TopBar({
   onQuery,
   sync,
   lastSyncedAt,
+  error,
   onRefresh,
   onClear,
   onNew,
@@ -135,6 +163,7 @@ export function TopBar({
   onQuery: (v: string) => void;
   sync: SyncState;
   lastSyncedAt: string | null;
+  error: string | null;
   onRefresh: () => void;
   onClear: () => void;
   onNew: () => void;
@@ -200,6 +229,7 @@ export function TopBar({
           <SyncPill
             state={sync}
             lastSyncedAt={lastSyncedAt}
+            error={error}
             onRefresh={onRefresh}
             onClear={onClear}
           />
