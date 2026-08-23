@@ -1,26 +1,238 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------
+   Monoedge Tracker — palette derived from the Google Sheet header
+   green (#1A6B4A). Neutrals carry a green cast so chrome and brand
+   read as one material rather than brand-on-grey.
+   --------------------------------------------------------------- */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --font-heading: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  /* Surfaces beyond shadcn's set */
+  --color-canvas: var(--canvas);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-tint: var(--brand-tint);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  --radius: 0.5rem;
+
+  --background: #f1f4f0;
+  --foreground: #0c1b14;
+  --canvas: #e7ebe6;
+
+  --card: #ffffff;
+  --card-foreground: #0c1b14;
+  --popover: #ffffff;
+  --popover-foreground: #0c1b14;
+
+  --primary: #1a6b4a;
+  --primary-foreground: #ffffff;
+  --secondary: #e9ede8;
+  --secondary-foreground: #1d2b23;
+
+  --muted: #eef1ed;
+  --muted-foreground: #5c6b62;
+  --accent: #e4ece7;
+  --accent-foreground: #10412c;
+
+  --destructive: #c02626;
+
+  --border: #dee4dd;
+  --input: #d5ddd4;
+  --ring: #1a6b4a;
+
+  --rule: #e4e9e2;
+  --rule-strong: #cfd8ce;
+  --brand: #1a6b4a;
+  --brand-deep: #0b3d2a;
+  --brand-tint: #e2efe8;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0c1b14;
+  --sidebar-primary: #1a6b4a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eef1ed;
+  --sidebar-accent-foreground: #0c1b14;
+  --sidebar-border: #dee4dd;
+  --sidebar-ring: #1a6b4a;
+}
+
+.dark {
+  --background: #0a100d;
+  --foreground: #e6ece8;
+  --canvas: #070c09;
+
+  --card: #121b16;
+  --card-foreground: #e6ece8;
+  --popover: #141e18;
+  --popover-foreground: #e6ece8;
+
+  --primary: #3fae7a;
+  --primary-foreground: #05130c;
+  --secondary: #1a2620;
+  --secondary-foreground: #dbe5df;
+
+  --muted: #161f1a;
+  --muted-foreground: #8a9a90;
+  --accent: #1b2a22;
+  --accent-foreground: #e6ece8;
+
+  --destructive: #e05a5a;
+
+  --border: #212e27;
+  --input: #2a3830;
+  --ring: #3fae7a;
+
+  --rule: #1c2721;
+  --rule-strong: #2b3a32;
+  --brand: #3fae7a;
+  --brand-deep: #9fd9bd;
+  --brand-tint: #14271e;
+
+  --sidebar: #0e1512;
+  --sidebar-foreground: #e6ece8;
+  --sidebar-primary: #3fae7a;
+  --sidebar-primary-foreground: #05130c;
+  --sidebar-accent: #161f1a;
+  --sidebar-accent-foreground: #e6ece8;
+  --sidebar-border: #212e27;
+  --sidebar-ring: #3fae7a;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv05" 1, "ss01" 1;
+  }
+  html {
+    @apply font-sans;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* Mono label used for every structural marker: column heads, field
+     names, stage names. The interface is labelled like a build system. */
+  .label-mono {
+    @apply font-mono text-[10px] font-medium uppercase tracking-[0.14em];
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Board scrolling: hide the ugly default bar, keep a slim one on hover */
+.board-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-strong) transparent;
+}
+.board-scroll::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+.board-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.board-scroll::-webkit-scrollbar-thumb {
+  background: var(--rule-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-rise {
+  animation: rise 0.34s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Tone chips. Each element carries its accent as --c and derives
+   fill/text/edge from it, so one token set serves light and dark
+   without a second palette. color-mix against --foreground is what
+   keeps the label readable in either theme.
+   --------------------------------------------------------------- */
+@layer components {
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium leading-none whitespace-nowrap;
+    background: color-mix(in oklab, var(--c) 12%, transparent);
+    color: color-mix(in oklab, var(--c) 72%, var(--foreground));
+    border-color: color-mix(in oklab, var(--c) 28%, transparent);
+  }
+  .chip-mono {
+    @apply font-mono text-[10px] uppercase tracking-[0.1em];
+  }
+  .dot {
+    @apply inline-block size-[7px] shrink-0 rounded-full;
+    background: var(--c);
+  }
+  .tone-text {
+    color: color-mix(in oklab, var(--c) 74%, var(--foreground));
+  }
+  .tone-fill {
+    background: color-mix(in oklab, var(--c) 12%, transparent);
+  }
 }

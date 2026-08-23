@@ -1,69 +1,204 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { TopBar } from "@/components/layout/top-bar";
+import { FilterBar, type View } from "@/components/layout/filter-bar";
+import { PipelineRail } from "@/components/board/pipeline-rail";
+import { KanbanBoard } from "@/components/board/kanban-board";
+import { SheetTable } from "@/components/sheet-view/sheet-table";
+import { WorkItemPanel } from "@/components/work-item/work-item-panel";
+import { NewWorkItemDialog } from "@/components/work-item/new-work-item-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { COLUMNS, type BoardColumnDef } from "@/lib/constants";
+import { applyFilters, statusForDrop, useTracker } from "@/lib/store";
+import type { Status } from "@/lib/types";
+
+export default function TrackerPage() {
+  const {
+    items,
+    loading,
+    sync,
+    lastSyncedAt,
+    filters,
+    groupBy,
+    selectedId,
+    composerOpen,
+    load,
+    createItem,
+    patchItem,
+    moveItem,
+    deleteItem,
+    resetBoard,
+    setFilters,
+    clearFilters,
+    setGroupBy,
+    select,
+    setComposerOpen,
+  } = useTracker();
+
+  const [view, setView] = useState<View>("board");
+  const [showParked, setShowParked] = useState(true);
+  const [composerDefaults, setComposerDefaults] = useState<{
+    status: Status;
+    assigneeId: string | null;
+  }>({ status: "Yet to Start", assigneeId: null });
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const visible = useMemo(() => applyFilters(items, filters), [items, filters]);
+  const selected = items.find((i) => i.id === selectedId) ?? null;
+
+  const openComposer = (
+    column: BoardColumnDef = COLUMNS[0],
+    assigneeId: string | null = null,
+  ) => {
+    setComposerDefaults({ status: column.primary, assigneeId });
+    setComposerOpen(true);
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="flex h-full flex-col bg-background">
+      <TopBar
+        query={filters.query}
+        onQuery={(query) => setFilters({ query })}
+        sync={sync}
+        lastSyncedAt={lastSyncedAt}
+        onRefresh={() => void load()}
+        onClear={() => {
+          void resetBoard();
+          toast("Board cleared");
+        }}
+        onNew={() => openComposer()}
+      />
+
+      <FilterBar
+        view={view}
+        onView={setView}
+        filters={filters}
+        onFilters={setFilters}
+        onClear={clearFilters}
+        groupBy={groupBy}
+        onGroupBy={setGroupBy}
+        showParked={showParked}
+        onShowParked={setShowParked}
+        visible={visible.length}
+        total={items.length}
+      />
+
+      {view === "board" && items.length > 0 && <PipelineRail items={visible} />}
+
+      <div className="min-h-0 flex-1">
+        {loading ? (
+          <BoardSkeleton />
+        ) : items.length === 0 ? (
+          <EmptyBoard onAdd={() => openComposer()} />
+        ) : visible.length === 0 ? (
+          <NoMatches onClear={clearFilters} />
+        ) : view === "board" ? (
+          <KanbanBoard
+            items={visible}
+            groupBy={groupBy}
+            showParked={showParked}
+            onOpen={select}
+            onAdd={openComposer}
+            onStatus={(id, status) => void patchItem(id, { status })}
+            onMove={(id, columnId, index, assigneeId) => {
+              const item = items.find((i) => i.id === id);
+              void moveItem(id, columnId, index, assigneeId);
+              if (!item) return;
+
+              const next = statusForDrop(item, columnId);
+              if (next === item.status) return;
+
+              toast(`MON-${item.ref} → ${next}`, {
+                description:
+                  next === "Completed"
+                    ? "Actual date stamped with today."
+                    : !item.startedDate
+                      ? "Started date stamped with today."
+                      : undefined,
+              });
+            }}
+          />
+        ) : (
+          <SheetTable items={visible} onOpen={select} />
+        )}
+      </div>
+
+      <WorkItemPanel
+        item={selected}
+        onClose={() => select(null)}
+        onPatch={(id, patch) => void patchItem(id, patch)}
+        onDelete={(id) => void deleteItem(id)}
+      />
+
+      <NewWorkItemDialog
+        open={composerOpen}
+        defaultStatus={composerDefaults.status}
+        defaultAssigneeId={composerDefaults.assigneeId}
+        onOpenChange={setComposerOpen}
+        onCreate={(input) => void createItem(input)}
+      />
+    </main>
+  );
+}
+
+function BoardSkeleton() {
+  return (
+    <div className="flex h-full gap-3 p-4 sm:px-6" aria-busy>
+      {Array.from({ length: 5 }).map((_, col) => (
+        <div key={col} className="w-[276px] shrink-0 space-y-2">
+          <Skeleton className="h-9 rounded-lg" />
+          {Array.from({ length: 3 - (col % 3) }).map((__, card) => (
+            <Skeleton key={card} className="h-[86px] rounded-lg" />
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+      ))}
+    </div>
+  );
+}
+
+function EmptyBoard({ onAdd }: { onAdd: () => void }) {
+  return (
+    <div className="flex h-full items-center justify-center px-6">
+      <div className="max-w-sm space-y-4 text-center">
+        <div className="flex justify-center gap-1.5">
+          {COLUMNS.map((c) => (
+            <span
+              key={c.id}
+              className="h-1 w-9 rounded-full"
+              style={{ background: c.color, opacity: 0.5 }}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          ))}
         </div>
-      </main>
+        <h2 className="text-[15px] font-semibold">Nothing on the board yet</h2>
+        <p className="text-[13px] leading-relaxed text-muted-foreground">
+          Add a work item to start, or connect the tracking sheet and the board
+          will fill itself.
+        </p>
+        <Button size="sm" onClick={onAdd}>
+          Add the first work item
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function NoMatches({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="flex h-full items-center justify-center px-6">
+      <div className="space-y-3 text-center">
+        <p className="text-[13px] text-muted-foreground">
+          No work items match these filters.
+        </p>
+        <Button size="sm" variant="outline" onClick={onClear}>
+          Clear filters
+        </Button>
+      </div>
     </div>
   );
 }
