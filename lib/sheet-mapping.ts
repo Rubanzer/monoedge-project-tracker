@@ -1,5 +1,12 @@
 import { TEAM } from "./constants";
-import type { IsoDate, Priority, Status, WorkItem, WorkType } from "./types";
+import type {
+  IsoDate,
+  Member,
+  Priority,
+  Status,
+  WorkItem,
+  WorkType,
+} from "./types";
 
 /**
  * Pure row <-> WorkItem mapping. No I/O and no credentials, so it can be
@@ -127,6 +134,46 @@ export const TYPE_ALIASES: Record<string, WorkType> = {
   fix: "Bug",
 };
 
+/**
+ * Works out who a Primary Person cell refers to.
+ *
+ * The app writes full names into column C, but a human typing straight into
+ * the sheet writes "Vismay", or "VR", or an email. Exact matches are tried
+ * first; looser ones only count when they land on exactly one person, so a
+ * team with two Priyas never silently assigns work to the wrong one.
+ */
+export function resolveMember(
+  personText: string,
+  assigneeKey: string,
+  team: Member[] = TEAM,
+): Member | null {
+  const key = personText.trim().toLowerCase().replace(/\s+/g, " ");
+  const stored = assigneeKey.trim().toLowerCase();
+
+  // Column M is written by the app and is authoritative.
+  const byKey = team.find((m) => m.id.toLowerCase() === stored);
+  if (byKey) return byKey;
+  if (!key) return null;
+
+  const exact =
+    team.find((m) => m.name.toLowerCase() === key) ??
+    team.find((m) => m.id.toLowerCase() === key) ??
+    team.find((m) => m.email?.toLowerCase() === key);
+  if (exact) return exact;
+
+  // Every loose form is pooled rather than tried in sequence. Cascading
+  // tiers hide real ambiguity: with two Priyas, "Priya" is ambiguous by
+  // first name, but one of them may still own the shorter email alias, and
+  // a tier-by-tier search would quietly hand the work to whoever that is.
+  const loose = team.filter(
+    (m) =>
+      m.name.toLowerCase().split(" ")[0] === key ||
+      (m.email ?? "").toLowerCase().split("@")[0] === key ||
+      m.initials.toLowerCase() === key,
+  );
+  return loose.length === 1 ? loose[0] : null;
+}
+
 export function rowToItem(
   row: unknown[],
   rowNumber: number,
@@ -165,16 +212,13 @@ export function rowToItem(
     warnings.push(`Row ${rowNumber}: type "${rawType}" not recognised`);
   }
 
-  // Prefer the stable key the app writes; fall back to matching the readable
-  // name in column C, so a person typed straight into the sheet still lands.
-  const assigneeKey = str(cell(COLS.assigneeKey));
   const personName = str(cell(COLS.person));
-  const assigneeId =
-    TEAM.find((m) => m.id === assigneeKey)?.id ??
-    TEAM.find((m) => m.name.toLowerCase() === personName.toLowerCase())?.id ??
-    null;
+  const member = resolveMember(personName, str(cell(COLS.assigneeKey)));
+  const assigneeId = member?.id ?? null;
   if (personName && !assigneeId) {
-    warnings.push(`Row ${rowNumber}: "${personName}" is not on the team list`);
+    warnings.push(
+      `Row ${rowNumber}: "${personName}" is not on the team list — add them to TEAM in lib/constants.ts`,
+    );
   }
 
   const id = str(cell(COLS.id));

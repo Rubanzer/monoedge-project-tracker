@@ -9,7 +9,13 @@ import type { Member, Priority, Status, WorkType } from "./types";
  * stable once work has been assigned.
  */
 export const TEAM: Member[] = [
-  { id: "vismay", name: "Vismay Rathod", initials: "VR", color: "#1A6B4A" },
+  {
+    id: "vismay",
+    name: "Vismay Rathod",
+    initials: "VR",
+    email: "vismay@monoedge.in",
+    color: "#1A6B4A",
+  },
 ];
 
 export const memberById = (id: string | null): Member | undefined =>

@@ -75,6 +75,8 @@ export interface Member {
   id: string;
   name: string;
   initials: string;
+  /** Work email. Used to match a Primary Person cell someone typed by hand. */
+  email?: string;
   /** Colour used for the avatar chip so people are recognisable at a glance. */
   color: string;
 }

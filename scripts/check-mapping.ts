@@ -1,6 +1,7 @@
 import {
   highestRef,
   itemToRow,
+  resolveMember,
   rowToItem,
   toIsoDate,
 } from "../lib/sheet-mapping";
@@ -120,6 +121,31 @@ check(
   12,
 );
 check("empty sheet", highestRef([]), 0);
+
+// --- Primary Person. The app writes full names, humans type whatever.
+const team = [
+  { id: "vismay", name: "Vismay Rathod", initials: "VR", email: "vismay@monoedge.in", color: "#1" },
+  { id: "priya-m", name: "Priya Menon", initials: "PM", email: "priya@monoedge.in", color: "#2" },
+  { id: "priya-s", name: "Priya Shah", initials: "PS", email: "priyas@monoedge.in", color: "#3" },
+];
+const who = (cell: string, stored = "") =>
+  resolveMember(cell, stored, team)?.id ?? null;
+
+check("full name", who("Vismay Rathod"), "vismay");
+check("first name only", who("Vismay"), "vismay");
+check("case and spacing", who("  vismay   rathod "), "vismay");
+check("initials", who("VR"), "vismay");
+check("email", who("vismay@monoedge.in"), "vismay");
+check("email local part", who("vismay"), "vismay");
+check("blank", who(""), null);
+check("stranger", who("Someone Else"), null);
+// Two Priyas: a bare first name must NOT guess.
+check("ambiguous first name refuses", who("Priya"), null);
+check("ambiguous resolved by surname", who("Priya Menon"), "priya-m");
+check("ambiguous resolved by initials", who("PS"), "priya-s");
+// Column M wins over whatever the readable column says.
+check("stored key wins", who("Priya Menon", "vismay"), "vismay");
+check("unknown stored key falls back to name", who("Priya Menon", "ghost"), "priya-m");
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
