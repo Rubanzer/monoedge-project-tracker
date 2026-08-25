@@ -72,12 +72,15 @@ export function readConfig(): SheetConfig {
   const projectNumber = env("GCP_PROJECT_NUMBER");
   const poolId = env("GCP_WORKLOAD_IDENTITY_POOL_ID");
   const providerId = env("GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID");
-  const federationVars = { projectNumber, poolId, providerId, clientEmail };
-  const federationSet = Object.values(federationVars).filter(Boolean).length;
 
-  // Federation first — but a half-configured federation is a mistake worth
-  // naming rather than silently falling through to the key path.
-  if (federationSet > 0) {
+  // Only the federation-exclusive variables signal intent. The service
+  // account email is needed by BOTH modes, so treating it as a signal makes
+  // a perfectly good key setup look like a broken federation one.
+  const attemptingFederation = [projectNumber, poolId, providerId].some(Boolean);
+
+  // A half-configured federation is a mistake worth naming rather than
+  // silently falling through to the key path.
+  if (attemptingFederation) {
     const missing = Object.entries({
       GCP_PROJECT_NUMBER: projectNumber,
       GCP_WORKLOAD_IDENTITY_POOL_ID: poolId,
