@@ -200,6 +200,19 @@ export function rowToItem(
   };
 }
 
+/**
+ * Highest reference already claimed in the sheet. Only rows carrying a real
+ * `MON-n` id count: an unsaved row gets a placeholder ref derived from its
+ * row number, and treating those as claimed makes the first import skip a
+ * block of numbers — a sheet of five fresh rows would come out MON-6..MON-10.
+ */
+export function highestRef(items: { id: string }[]): number {
+  return items.reduce((max, i) => {
+    const m = /^MON-(\d+)$/.exec(i.id);
+    return m ? Math.max(max, Number(m[1])) : max;
+  }, 0);
+}
+
 /** The A..N cells for a whole row, in column order. */
 export function itemToRow(item: WorkItem): unknown[] {
   const member = TEAM.find((m) => m.id === item.assigneeId);

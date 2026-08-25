@@ -1,4 +1,5 @@
 import {
+  highestRef,
   itemToRow,
   rowToItem,
   toIsoDate,
@@ -107,6 +108,18 @@ check(
   "Vismay Rathod",
 );
 check("column M is the stable key", itemToRow(item)[12], "vismay");
+
+// --- Reference numbering. A row with no Item ID yet carries a placeholder
+// ref derived from its row number. Counting those as claimed made a fresh
+// five-row sheet import as MON-6..MON-10 instead of MON-1..MON-5.
+check("no ids yet", highestRef([{ id: "row-2" }, { id: "row-3" }]), 0);
+check("mixed", highestRef([{ id: "MON-3" }, { id: "row-9" }]), 3);
+check(
+  "highest wins, not last",
+  highestRef([{ id: "MON-1" }, { id: "MON-12" }, { id: "MON-4" }]),
+  12,
+);
+check("empty sheet", highestRef([]), 0);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

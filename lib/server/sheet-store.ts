@@ -6,6 +6,7 @@ import {
   LAST_COL,
   MANAGED_HEADERS,
   colIndex,
+  highestRef,
   itemToRow,
   rowToItem,
   str,
@@ -67,7 +68,7 @@ async function backfillIds(c: Ctx, items: WorkItem[]): Promise<void> {
   const needing = items.filter((i) => !/^MON-\d+$/.test(i.id));
   if (!needing.length) return;
 
-  let next = items.reduce((max, i) => Math.max(max, i.ref || 0), 0);
+  let next = highestRef(items);
   const updates = needing.map((item) => {
     next += 1;
     item.id = `MON-${next}`;
