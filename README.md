@@ -123,10 +123,23 @@ an **Editor**.
 > If the address is rejected, an admin has to allow external sharing for this
 > file. Do this step early — it is the one that needs someone else.
 
-### 3. Set four environment variables
+### 3. Turn the key into environment variables
 
-In Vercel, **Settings → Environment Variables** (and `.env.local` for local
-work — see [`.env.example`](.env.example)):
+Do not paste the PEM by hand. Real newlines break dotenv parsing and quoting
+rules differ between editors, which is the most common way this setup fails:
+
+```bash
+npm run setup:key -- "C:/path/to/service-account.json"
+```
+
+It validates the file, writes `GOOGLE_SERVICE_ACCOUNT_EMAIL` and a correctly
+escaped `GOOGLE_PRIVATE_KEY` into `.env.local`, and prints the address to
+share the sheet with. The key itself is never printed. The values it writes
+are already in the form Vercel's dashboard expects, so copy them straight
+across.
+
+The full set, if you would rather do it by hand — see
+[`.env.example`](.env.example):
 
 | Variable | Value |
 |---|---|

@@ -76,6 +76,31 @@ function client(config: SheetConfig): JWT {
   return jwt;
 }
 
+/**
+ * Google's auth failures all arrive as "invalid_grant" with the useful part
+ * buried in the message. Each of these means something different and has a
+ * different fix, so they are worth telling apart.
+ */
+function authHint(detail: string): string {
+  const d = detail.toLowerCase();
+  if (d.includes("account not found")) {
+    return "That service account does not exist. Check GOOGLE_SERVICE_ACCOUNT_EMAIL matches client_email in the JSON key, and that the account has not been deleted.";
+  }
+  if (d.includes("invalid jwt signature")) {
+    return "The key does not belong to that service account. Both values must come from the same JSON key file.";
+  }
+  if (d.includes("token must be a short-lived token") || d.includes("clock")) {
+    return "This machine's clock is out of sync with Google. Fix the system time and retry.";
+  }
+  if (d.includes("decoder") || d.includes("pem") || d.includes("asn1")) {
+    return "GOOGLE_PRIVATE_KEY is not a readable PEM. Run: npm run setup:key -- path/to/key.json";
+  }
+  if (d.includes("api has not been used") || d.includes("disabled")) {
+    return "Enable the Google Sheets API for the project that owns this service account.";
+  }
+  return "Check GOOGLE_PRIVATE_KEY was pasted whole, including the BEGIN and END lines. `npm run setup:key` does this for you.";
+}
+
 async function call<T>(
   config: SheetConfig,
   path: string,
@@ -86,10 +111,11 @@ async function call<T>(
     const res = await client(config).getAccessToken();
     token = res.token;
   } catch (e) {
+    const detail = e instanceof Error ? e.message : String(e);
     throw new SheetError(
-      `Could not authenticate as ${config.clientEmail}: ${e instanceof Error ? e.message : e}`,
+      `Could not authenticate as ${config.clientEmail}: ${detail}`,
       500,
-      "Check GOOGLE_PRIVATE_KEY was pasted whole, including the BEGIN and END lines.",
+      authHint(detail),
     );
   }
 
