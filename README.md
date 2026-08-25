@@ -27,7 +27,7 @@ npm run dev
 Four columns, plus **On hold** as a parked lane you can hide.
 
 ```
-Yet to start  │  In progress  │  Testing done  │  Completed        ⟨ On hold ⟩
+Yet to start  │  In progress  │  In testing  │  Completed        ⟨ On hold ⟩
 ```
 
 **In progress holds four statuses.** Collapsing the delivery detail into one
@@ -39,7 +39,7 @@ one click on the board rather than a trip through the detail panel.
 |---|---|
 | Yet to start | `Yet to Start` |
 | In progress | `In Progress`, `PR review`, `Ready to Merge`, `Pending Prod Push` |
-| Testing done | `Testing done` |
+| In testing | `In testing` |
 | Completed | `Completed` |
 | On hold *(parked)* | `On-hold` |
 
@@ -54,7 +54,7 @@ to place a row:
 
 ```
 Yet to Start · In Progress · PR review · Ready to Merge
-Pending Prod Push · Testing done · Completed · On-hold
+Pending Prod Push · In testing · Completed · On-hold
 ```
 
 Column order and grouping live in `COLUMNS` in
@@ -71,9 +71,9 @@ Moving a card writes the dates you would otherwise fill in by hand:
 
 Both are editable in the detail panel if the automatic value is wrong.
 
-Nothing in **Testing done**, **Completed** or **On hold** is flagged late.
-Finished work cannot be late, and a parked slip was a decision rather than a
-problem to chase.
+Nothing in **Completed** or **On hold** is flagged late: finished work cannot
+be late, and a parked slip was a decision rather than a problem to chase. Work
+sitting in **In testing** is still owed, so it runs late like anything else.
 
 ## The team
 
@@ -253,9 +253,10 @@ can hide K–N in Google Sheets; the app does not care.
 
 ### It reads your dropdown as it is
 
-The importer normalises values, so `Testing` maps to `Testing done` and the
-retired `Define Approach` folds into `In Progress`. Casing and spacing are
-ignored. Anything it cannot place is defaulted **and reported** — the app
+The importer normalises values, so `Testing` and the older `Testing done` both
+map to `In testing`, and the retired `Define Approach` folds into `In Progress`.
+Casing and spacing are ignored. Anything it cannot place is defaulted **and
+reported** — the app
 raises a toast listing the rows, and `/api/sheet/diagnose` lists them too.
 Nothing is silently mangled. Aliases live in
 [`lib/sheet-mapping.ts`](lib/sheet-mapping.ts).

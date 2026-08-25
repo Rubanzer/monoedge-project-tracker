@@ -34,7 +34,9 @@ check("garbage text", toIsoDate("sometime next week"), null);
 const statusOf = (raw: string) =>
   rowToItem(["t", "", "", raw, "", "", "", "", "High", ""], 2, [])?.status;
 
-check("sheet says Testing", statusOf("Testing"), "Testing done");
+check("sheet says Testing", statusOf("Testing"), "In testing");
+check("legacy Testing done", statusOf("Testing done"), "In testing");
+check("new In testing", statusOf("In testing"), "In testing");
 check("sheet says Define Approach", statusOf("Define Approach"), "In Progress");
 check("sheet says PR review", statusOf("PR review"), "PR review");
 check("sheet says Ready to Merge", statusOf("Ready to Merge"), "Ready to Merge");

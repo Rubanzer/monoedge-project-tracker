@@ -35,7 +35,7 @@ export const STATUS_TOKENS: Record<Status, Token> = {
   "PR review": { color: "#5C86A3" },
   "Ready to Merge": { color: "#2563EB" },
   "Pending Prod Push": { color: "#E1703F" },
-  "Testing done": { color: "#0D9488" },
+  "In testing": { color: "#0D9488" },
   Completed: { color: "#14804A" },
   "On-hold": { color: "#C0392B" },
 };
@@ -82,12 +82,12 @@ export const COLUMNS: BoardColumnDef[] = [
     hint: "Being built, reviewed, merged or waiting on a deploy",
   },
   {
-    id: "testing-done",
-    label: "Testing done",
-    primary: "Testing done",
-    statuses: ["Testing done"],
-    color: STATUS_TOKENS["Testing done"].color,
-    hint: "Verified on the deployed build",
+    id: "in-testing",
+    label: "In testing",
+    primary: "In testing",
+    statuses: ["In testing"],
+    color: STATUS_TOKENS["In testing"].color,
+    hint: "Being verified on the deployed build",
   },
   {
     id: "completed",
@@ -123,10 +123,15 @@ export const ACTIVE_STAGES: Status[] = [
   "PR review",
   "Ready to Merge",
   "Pending Prod Push",
+  "In testing",
 ];
 
-/** Past these, a missed planned date is history rather than a problem. */
-export const TERMINAL_STAGES: Status[] = ["Testing done", "Completed"];
+/**
+ * Past these, a missed planned date is history rather than a problem.
+ * Only Completed qualifies: something sitting in testing is still owed, so
+ * it counts as in flight and can run late like anything else.
+ */
+export const TERMINAL_STAGES: Status[] = ["Completed"];
 
 /** Statuses that mean work has begun, for the automatic start date. */
 export const STARTED_STAGES: Status[] = [
@@ -134,7 +139,7 @@ export const STARTED_STAGES: Status[] = [
   "PR review",
   "Ready to Merge",
   "Pending Prod Push",
-  "Testing done",
+  "In testing",
 ];
 
 /** Order used by the pipeline rail — the fine detail the board collapses. */
@@ -144,7 +149,7 @@ export const FLOW: Status[] = [
   "PR review",
   "Ready to Merge",
   "Pending Prod Push",
-  "Testing done",
+  "In testing",
   "Completed",
 ];
 
