@@ -103,56 +103,122 @@ adapts to the sheet rather than the other way round: the existing dropdown
 values are accepted as-is, and the columns it needs are created on first
 connect. **No manual preparation of the sheet is required.**
 
-### 1. Create a service account
+Authentication uses **workload identity federation**: Vercel mints a
+short-lived OIDC token for each deployment and Google exchanges it for an
+access token. **No key file exists**, so there is nothing to leak, nothing to
+rotate, and nothing for Google's `disableServiceAccountKeyCreation` org policy
+to block — that policy is on by default in newer Workspace organisations and
+will stop the key-based route dead.
 
-1. In the [Google Cloud console](https://console.cloud.google.com), create (or
-   pick) a project.
+A key-based fallback is still supported. See [Fallback: a service account
+key](#fallback-a-service-account-key).
+
+### 1. Enable the Sheets API and create a service account
+
+1. In the [Google Cloud console](https://console.cloud.google.com), pick the
+   project you will use. **API enablement is per-project** — enabling it on
+   the wrong one produces an auth success followed by every call failing.
 2. **APIs & Services → Library → Google Sheets API → Enable.**
-3. **IAM & Admin → Service Accounts → Create service account.** No roles are
-   needed; access is granted by sharing the sheet, not by IAM.
-4. On the account, **Keys → Add key → Create new key → JSON.** Keep the file
-   somewhere safe; it is the only copy.
+3. **IAM & Admin → Service Accounts → Create service account.** No IAM roles
+   are needed; access to the data comes from sharing the sheet. **Do not
+   create a key.**
 
-### 2. Share the sheet with it
+### 2. Create a workload identity pool
 
-Open the tracking sheet, **Share**, and add the service account's
-`client_email` (it looks like `something@project.iam.gserviceaccount.com`) as
-an **Editor**.
+**IAM & Admin → Workload Identity Federation → Create Pool.** Name and id
+`vercel`.
 
-> Google Workspace often blocks sharing outside the organisation by default.
-> If the address is rejected, an admin has to allow external sharing for this
-> file. Do this step early — it is the one that needs someone else.
+Add an **OpenID Connect (OIDC)** provider to it, id `vercel`:
 
-### 3. Turn the key into environment variables
+| Field | Value |
+|---|---|
+| Issuer URL | `https://oidc.vercel.com/[TEAM_SLUG]` — the path from your Vercel team URL |
+| JWK file | leave empty |
+| Audience | **Allowed audiences** → `https://vercel.com/[TEAM_SLUG]` |
+| Attribute mapping | `google.subject` = `assertion.sub` |
 
-Do not paste the PEM by hand. Real newlines break dotenv parsing and quoting
-rules differ between editors, which is the most common way this setup fails:
+Choosing *Allowed audiences* rather than *Default audience* keeps the app code
+free of an extra audience variable.
 
-```bash
-npm run setup:key -- "C:/path/to/service-account.json"
+### 3. Let that identity impersonate the service account
+
+On the **service account** → **Permissions** → grant **Workload Identity
+User** (`roles/iam.workloadIdentityUser`) to this principal:
+
+```
+principal://iam.googleapis.com/projects/[PROJECT_NUMBER]/locations/global/workloadIdentityPools/vercel/subject/owner:[TEAM_SLUG]:project:[VERCEL_PROJECT]:environment:production
 ```
 
-It validates the file, writes `GOOGLE_SERVICE_ACCOUNT_EMAIL` and a correctly
-escaped `GOOGLE_PRIVATE_KEY` into `.env.local`, and prints the address to
-share the sheet with. The key itself is never printed. The values it writes
-are already in the form Vercel's dashboard expects, so copy them straight
-across.
+Add one principal per environment you want to work — `production`,
+`preview`, `development`. If impersonation is still refused, also grant
+**Service Account Token Creator**, which is the permission the
+`generateAccessToken` call actually checks.
 
-The full set, if you would rather do it by hand — see
-[`.env.example`](.env.example):
+`/api/sheet/diagnose` prints the exact `sub` from the live token, so you can
+compare it against what you bound rather than guessing.
 
-| Variable | Value |
+### 4. Share the sheet
+
+Share the tracking sheet with the service account address as **Editor**.
+
+> Workspace often blocks sharing outside the organisation. If the address is
+> rejected, an admin must allow it. Do this early — it is the step that needs
+> someone else.
+
+### 5. Enable OIDC on the Vercel project, and set the variables
+
+In Vercel: **Project Settings → Security → OIDC Federation → enable**.
+
+Then **Settings → Environment Variables**:
+
+| Variable | Where to find it |
 |---|---|
 | `NEXT_PUBLIC_TRACKER_BACKEND` | `sheets` |
 | `GOOGLE_SHEET_ID` | the part of the sheet URL between `/d/` and `/edit` |
-| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | `client_email` from the JSON key |
-| `GOOGLE_PRIVATE_KEY` | `private_key` from the JSON key, pasted whole including the BEGIN and END lines |
+| `GCP_PROJECT_NUMBER` | IAM & Admin → Settings |
+| `GCP_WORKLOAD_IDENTITY_POOL_ID` | `vercel` |
+| `GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID` | `vercel` |
+| `GCP_SERVICE_ACCOUNT_EMAIL` | IAM & Admin → Service Accounts |
 | `GOOGLE_SHEET_TAB` | *optional* — defaults to the first tab |
 
 Redeploy. Without `NEXT_PUBLIC_TRACKER_BACKEND=sheets` the app stays on the
 browser-local draft, so a checkout with no credentials still runs.
 
-### 4. Check it
+All four `GCP_` variables are required together. Setting some but not all is
+reported as "half configured" rather than silently falling back to a key.
+
+### Working locally
+
+Federation works off Vercel too, because `vercel env pull` writes a real OIDC
+token into `.env.local`:
+
+```bash
+vercel link
+vercel env pull
+```
+
+The token is short-lived — when `/api/sheet/diagnose` reports it missing or
+expired, pull again.
+
+### Fallback: a service account key
+
+Only if federation is genuinely not an option. A downloaded key is a permanent
+credential that works from anywhere until someone revokes it, and most
+Workspace orgs now block creating one. If you must:
+
+```bash
+npm run setup:key -- "C:/path/to/service-account.json"
+```
+
+It validates the file and writes `GOOGLE_SERVICE_ACCOUNT_EMAIL` plus a
+correctly escaped `GOOGLE_PRIVATE_KEY` into `.env.local` — pasting a PEM by
+hand is the most common way this setup fails, because real newlines break
+dotenv parsing and quoting differs between editors. The key is never printed,
+and the values written are the form Vercel's dashboard accepts.
+
+Leave the `GCP_` variables unset, or federation takes precedence.
+
+### Check it
 
 Visit **`/api/sheet/diagnose`** on the deployment. It walks the connection one
 step at a time and names the step that fails, with a fix:
