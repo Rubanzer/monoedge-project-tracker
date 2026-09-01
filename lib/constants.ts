@@ -16,6 +16,30 @@ export const TEAM: Member[] = [
     email: "vismay@monoedge.in",
     color: "#1A6B4A",
   },
+  {
+    id: "vrushit",
+    name: "Vrushit",
+    initials: "V",
+    color: "#2563EB",
+  },
+  {
+    id: "krishna",
+    name: "Krishna",
+    initials: "K",
+    color: "#D99A2B",
+  },
+  {
+    id: "manav",
+    name: "Manav",
+    initials: "M",
+    color: "#7C3AED",
+  },
+  {
+    id: "tushar",
+    name: "Tushar",
+    initials: "T",
+    color: "#E1703F",
+  },
 ];
 
 export const memberById = (id: string | null): Member | undefined =>
