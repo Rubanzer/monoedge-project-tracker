@@ -348,19 +348,10 @@ export async function writeRanges(
   });
 }
 
-export async function appendRow(
-  config: SheetConfig,
-  tab: string,
-  lastColumn: string,
-  values: unknown[],
-): Promise<void> {
-  const range = encodeURIComponent(`${quoteTab(tab)}!A:${lastColumn}`);
-  await call(
-    config,
-    `/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
-    { method: "POST", body: JSON.stringify({ values: [values] }) },
-  );
-}
+// `appendRow` used to live here, wrapping Sheets' values.append. It is gone
+// on purpose: append targets the last row of the *table* Google detects, and
+// a structured Table keeps its range after rows are cleared, so new items
+// landed below a block of blank rows. sheet-store picks the row itself now.
 
 export async function deleteRow(
   config: SheetConfig,

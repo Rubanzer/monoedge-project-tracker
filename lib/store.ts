@@ -45,7 +45,7 @@ export function stampDates(item: WorkItem, next: Status): Partial<WorkItem> {
 
 /**
  * Which status a card takes when dropped on a column. A column can hold
- * several statuses — dropping a "PR created" card back into In progress must
+ * several statuses — dropping a "PR Created" card back into In progress must
  * not silently demote it to "In Progress".
  */
 export function statusForDrop(item: WorkItem, columnId: string): Status {

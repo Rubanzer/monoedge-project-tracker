@@ -5,6 +5,7 @@ import {
   rowToItem,
   toIsoDate,
 } from "../lib/sheet-mapping";
+import type { Member } from "../lib/types";
 
 let pass = 0;
 let fail = 0;
@@ -34,17 +35,17 @@ check("garbage text", toIsoDate("sometime next week"), null);
 const statusOf = (raw: string) =>
   rowToItem(["t", "", "", raw, "", "", "", "", "High", ""], 2, [])?.status;
 
-check("sheet says Testing", statusOf("Testing"), "In testing");
-check("legacy Testing done", statusOf("Testing done"), "In testing");
-check("new In testing", statusOf("In testing"), "In testing");
+check("sheet says Testing", statusOf("Testing"), "In Testing");
+check("legacy Testing done", statusOf("Testing done"), "In Testing");
+check("new In testing", statusOf("In Testing"), "In Testing");
 check("sheet says Define Approach", statusOf("Define Approach"), "In Progress");
-check("new PR created", statusOf("PR created"), "PR created");
-check("legacy PR review", statusOf("PR review"), "PR created");
-check("legacy Ready to Merge", statusOf("Ready to Merge"), "PR created");
+check("new PR created", statusOf("PR Created"), "PR Created");
+check("legacy PR review", statusOf("PR review"), "PR Created");
+check("legacy Ready to Merge", statusOf("Ready to Merge"), "PR Created");
 check(
   "legacy Pending Prod Push",
   statusOf("Pending Prod Push"),
-  "PR created",
+  "PR Created",
 );
 check("sheet says Completed", statusOf("Completed"), "Completed");
 check("sheet says On-hold", statusOf("On-hold"), "On-hold");
@@ -84,7 +85,7 @@ const item = {
   title: "Rate limit the public API",
   description: "One integration is hammering us.",
   assigneeId: "vismay",
-  status: "PR created" as const,
+  status: "PR Created" as const,
   createdDate: "2026-08-14",
   startedDate: "2026-08-15",
   plannedDate: "2026-08-22",
@@ -126,10 +127,10 @@ check(
 check("empty sheet", highestRef([]), 0);
 
 // --- Primary Person. The app writes full names, humans type whatever.
-const team = [
-  { id: "vismay", name: "Vismay Rathod", initials: "VR", email: "vismay@monoedge.in", color: "#1" },
-  { id: "priya-m", name: "Priya Menon", initials: "PM", email: "priya@monoedge.in", color: "#2" },
-  { id: "priya-s", name: "Priya Shah", initials: "PS", email: "priyas@monoedge.in", color: "#3" },
+const team: Member[] = [
+  { id: "vismay", name: "Vismay Rathod", initials: "VR", role: "admin", email: "vismay@monoedge.in", color: "#1" },
+  { id: "priya-m", name: "Priya Menon", initials: "PM", role: "admin", email: "priya@monoedge.in", color: "#2" },
+  { id: "priya-s", name: "Priya Shah", initials: "PS", role: "developer", email: "priyas@monoedge.in", color: "#3" },
 ];
 const who = (cell: string, stored = "") =>
   resolveMember(cell, stored, team)?.id ?? null;

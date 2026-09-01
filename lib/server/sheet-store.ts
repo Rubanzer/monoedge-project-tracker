@@ -13,7 +13,6 @@ import {
 } from "@/lib/sheet-mapping";
 import type { WorkItem } from "@/lib/types";
 import {
-  appendRow,
   deleteRow,
   getTab,
   readConfig,
@@ -117,6 +116,32 @@ async function findRow(c: Ctx, id: string): Promise<number> {
   return FIRST_DATA_ROW + idx;
 }
 
+/** A row the importer would skip: every column the app reads is blank. */
+const rowIsEmpty = (row: unknown[] | undefined): boolean =>
+  !row || Object.values(COLS).every((c) => str(row[colIndex(c)]) === "");
+
+/**
+ * The row a new item should occupy: the first blank one, or the row after the
+ * last used one if there are no gaps.
+ *
+ * Sheets' own `values.append` cannot be used here. It appends after the last
+ * row of the *table* it detects, and this sheet is a structured Table whose
+ * range keeps its old extent after the contents of a row are deleted — so
+ * clearing rows 2-10 and adding an item put it on row 11, leaving nine blank
+ * rows above it. Finding the row ourselves, with the same definition of empty
+ * the importer uses, keeps writing and reading in agreement.
+ */
+async function nextFreeRow(c: Ctx): Promise<number> {
+  const rows = await readRange(
+    c.config,
+    c.tab,
+    `A${FIRST_DATA_ROW}:${LAST_COL}`,
+  );
+  const gap = rows.findIndex(rowIsEmpty);
+  // Trailing empty rows are not returned at all, so no gap means append.
+  return FIRST_DATA_ROW + (gap === -1 ? rows.length : gap);
+}
+
 export async function createItem(item: WorkItem): Promise<WorkItem> {
   const c = await ctx();
   await ensureHeaders(c);
@@ -139,8 +164,11 @@ export async function createItem(item: WorkItem): Promise<WorkItem> {
     id: `MON-${highest + 1}`,
     updatedAt: new Date().toISOString(),
   };
-  await appendRow(c.config, c.tab, LAST_COL, itemToRow(saved));
-  return saved;
+  const row = await nextFreeRow(c);
+  await writeRanges(c.config, c.tab, [
+    { a1: `A${row}:${LAST_COL}${row}`, values: [itemToRow(saved)] },
+  ]);
+  return { ...saved, sheetRow: row };
 }
 
 export async function updateItem(

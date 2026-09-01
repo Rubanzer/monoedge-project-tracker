@@ -15,6 +15,7 @@ export const TEAM: Member[] = [
     id: "vismay",
     name: "Vismay Rathod",
     initials: "VR",
+    role: "admin",
     email: "vismay@monoedge.in",
     color: "#204494",
   },
@@ -22,27 +23,43 @@ export const TEAM: Member[] = [
     id: "vrushit",
     name: "Vrushit",
     initials: "V",
+    role: "admin",
+    // TODO: real @monoedge.in address. Until it is here this person cannot
+    // sign in — the resolver fails closed rather than guessing at a pattern.
+    email: undefined,
     color: "#0B6E75",
   },
   {
     id: "krishna",
     name: "Krishna",
     initials: "K",
+    role: "admin",
+    email: undefined, // TODO
     color: "#5B45A8",
   },
   {
     id: "manav",
     name: "Manav",
     initials: "M",
+    role: "admin",
+    email: undefined, // TODO
     color: "#9A5A12",
   },
   {
     id: "tushar",
     name: "Tushar",
     initials: "T",
+    role: "developer",
+    email: undefined, // TODO
     color: "#9E2F4E",
   },
 ];
+
+export const memberByEmail = (email: string | null | undefined) => {
+  const key = email?.trim().toLowerCase();
+  if (!key) return undefined;
+  return TEAM.find((m) => m.email?.toLowerCase() === key);
+};
 
 export const memberById = (id: string | null): Member | undefined =>
   id ? TEAM.find((m) => m.id === id) : undefined;
@@ -59,8 +76,8 @@ export const STATUS_TOKENS: Record<Status, Token> = {
   "Yet to Start": { color: "#6B7690" },
   "In Progress": { color: "#C8871F" },
   // The one delivery stage, so it takes MonoEdge Blue itself.
-  "PR created": { color: "#204494" },
-  "In testing": { color: "#0F8C93" },
+  "PR Created": { color: "#204494" },
+  "In Testing": { color: "#0F8C93" },
   Completed: { color: "#1A7F52" },
   "On-hold": { color: "#B33A2B" },
 };
@@ -79,7 +96,7 @@ export interface BoardColumnDef {
 }
 
 /**
- * Four columns. PR created lives inside In progress rather than as its own
+ * Four columns. PR Created lives inside In progress rather than as its own
  * column, so the board stays readable without losing the precise status.
  * Change a card's exact status from the card menu or the detail panel.
  */
@@ -96,16 +113,16 @@ export const COLUMNS: BoardColumnDef[] = [
     id: "in-progress",
     label: "In progress",
     primary: "In Progress",
-    statuses: ["In Progress", "PR created"],
+    statuses: ["In Progress", "PR Created"],
     color: STATUS_TOKENS["In Progress"].color,
     hint: "Being built, or up for review as a pull request",
   },
   {
     id: "in-testing",
     label: "In testing",
-    primary: "In testing",
-    statuses: ["In testing"],
-    color: STATUS_TOKENS["In testing"].color,
+    primary: "In Testing",
+    statuses: ["In Testing"],
+    color: STATUS_TOKENS["In Testing"].color,
     hint: "Being verified on the deployed build",
   },
   {
@@ -139,8 +156,8 @@ export const columnById = (id: string): BoardColumnDef | undefined =>
 /** Statuses that mean work is actively moving, for the in-flight readout. */
 export const ACTIVE_STAGES: Status[] = [
   "In Progress",
-  "PR created",
-  "In testing",
+  "PR Created",
+  "In Testing",
 ];
 
 /**
@@ -153,16 +170,16 @@ export const TERMINAL_STAGES: Status[] = ["Completed"];
 /** Statuses that mean work has begun, for the automatic start date. */
 export const STARTED_STAGES: Status[] = [
   "In Progress",
-  "PR created",
-  "In testing",
+  "PR Created",
+  "In Testing",
 ];
 
 /** Order used by the pipeline rail — the fine detail the board collapses. */
 export const FLOW: Status[] = [
   "Yet to Start",
   "In Progress",
-  "PR created",
-  "In testing",
+  "PR Created",
+  "In Testing",
   "Completed",
 ];
 

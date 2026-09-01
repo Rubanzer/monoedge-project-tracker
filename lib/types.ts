@@ -13,8 +13,8 @@
 export const STATUSES = [
   "Yet to Start",
   "In Progress",
-  "PR created",
-  "In testing",
+  "PR Created",
+  "In Testing",
   "Completed",
   "On-hold",
 ] as const;
@@ -69,11 +69,26 @@ export interface WorkItem {
   updatedAt: string;
 }
 
+/**
+ * What someone is allowed to see and change.
+ *
+ * `admin` sees the whole board. `developer` sees only work assigned to them,
+ * plus anything unassigned so a backlog item can still be picked up, and may
+ * only edit their own rows. Enforced on the server in lib/server/session.ts —
+ * the client filter is a convenience, never the boundary.
+ */
+export type Role = "admin" | "developer";
+
 export interface Member {
   id: string;
   name: string;
   initials: string;
-  /** Work email. Used to match a Primary Person cell someone typed by hand. */
+  role: Role;
+  /**
+   * Work email. Two jobs: matching a Primary Person cell someone typed by
+   * hand, and — since auth — mapping a signed-in Google account to this
+   * person. An address that is not on this list cannot sign in at all.
+   */
   email?: string;
   /** Colour used for the avatar chip so people are recognisable at a glance. */
   color: string;
