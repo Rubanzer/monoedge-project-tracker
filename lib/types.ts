@@ -13,9 +13,7 @@
 export const STATUSES = [
   "Yet to Start",
   "In Progress",
-  "PR review",
-  "Ready to Merge",
-  "Pending Prod Push",
+  "PR created",
   "In testing",
   "Completed",
   "On-hold",

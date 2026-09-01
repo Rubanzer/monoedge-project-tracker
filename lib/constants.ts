@@ -1,12 +1,14 @@
 import type { Member, Priority, Status, WorkType } from "./types";
 
 /**
- * The team. Add the other four here — id, name, initials and a colour is all
- * it takes; avatars, filters, swimlanes and the assignee picker all read from
- * this one list.
+ * The team. id, name, initials and a colour is all it takes; avatars,
+ * filters, swimlanes and the assignee picker all read from this one list.
  *
  * `id` is what gets written to the sheet's Primary Person column, so keep it
  * stable once work has been assigned.
+ *
+ * Colours run cool-forward from MonoEdge Blue so a row of avatars reads as
+ * one family. Every one of them clears 4.5:1 against the white initials.
  */
 export const TEAM: Member[] = [
   {
@@ -14,31 +16,31 @@ export const TEAM: Member[] = [
     name: "Vismay Rathod",
     initials: "VR",
     email: "vismay@monoedge.in",
-    color: "#1A6B4A",
+    color: "#204494",
   },
   {
     id: "vrushit",
     name: "Vrushit",
     initials: "V",
-    color: "#2563EB",
+    color: "#0B6E75",
   },
   {
     id: "krishna",
     name: "Krishna",
     initials: "K",
-    color: "#D99A2B",
+    color: "#5B45A8",
   },
   {
     id: "manav",
     name: "Manav",
     initials: "M",
-    color: "#7C3AED",
+    color: "#9A5A12",
   },
   {
     id: "tushar",
     name: "Tushar",
     initials: "T",
-    color: "#E1703F",
+    color: "#9E2F4E",
   },
 ];
 
@@ -54,14 +56,13 @@ interface Token {
  * match the dropdown exactly or rows will not map on import.
  */
 export const STATUS_TOKENS: Record<Status, Token> = {
-  "Yet to Start": { color: "#7C8B82" },
-  "In Progress": { color: "#D99A2B" },
-  "PR review": { color: "#5C86A3" },
-  "Ready to Merge": { color: "#2563EB" },
-  "Pending Prod Push": { color: "#E1703F" },
-  "In testing": { color: "#0D9488" },
-  Completed: { color: "#14804A" },
-  "On-hold": { color: "#C0392B" },
+  "Yet to Start": { color: "#6B7690" },
+  "In Progress": { color: "#C8871F" },
+  // The one delivery stage, so it takes MonoEdge Blue itself.
+  "PR created": { color: "#204494" },
+  "In testing": { color: "#0F8C93" },
+  Completed: { color: "#1A7F52" },
+  "On-hold": { color: "#B33A2B" },
 };
 
 export interface BoardColumnDef {
@@ -78,10 +79,9 @@ export interface BoardColumnDef {
 }
 
 /**
- * Four columns. The delivery detail — PR review, Ready to Merge, Pending Prod
- * Push — lives inside In progress rather than as its own column, so the board
- * stays readable without losing the precise status. Change a card's exact
- * status from the card menu or the detail panel.
+ * Four columns. PR created lives inside In progress rather than as its own
+ * column, so the board stays readable without losing the precise status.
+ * Change a card's exact status from the card menu or the detail panel.
  */
 export const COLUMNS: BoardColumnDef[] = [
   {
@@ -96,14 +96,9 @@ export const COLUMNS: BoardColumnDef[] = [
     id: "in-progress",
     label: "In progress",
     primary: "In Progress",
-    statuses: [
-      "In Progress",
-      "PR review",
-      "Ready to Merge",
-      "Pending Prod Push",
-    ],
+    statuses: ["In Progress", "PR created"],
     color: STATUS_TOKENS["In Progress"].color,
-    hint: "Being built, reviewed, merged or waiting on a deploy",
+    hint: "Being built, or up for review as a pull request",
   },
   {
     id: "in-testing",
@@ -144,9 +139,7 @@ export const columnById = (id: string): BoardColumnDef | undefined =>
 /** Statuses that mean work is actively moving, for the in-flight readout. */
 export const ACTIVE_STAGES: Status[] = [
   "In Progress",
-  "PR review",
-  "Ready to Merge",
-  "Pending Prod Push",
+  "PR created",
   "In testing",
 ];
 
@@ -160,9 +153,7 @@ export const TERMINAL_STAGES: Status[] = ["Completed"];
 /** Statuses that mean work has begun, for the automatic start date. */
 export const STARTED_STAGES: Status[] = [
   "In Progress",
-  "PR review",
-  "Ready to Merge",
-  "Pending Prod Push",
+  "PR created",
   "In testing",
 ];
 
@@ -170,9 +161,7 @@ export const STARTED_STAGES: Status[] = [
 export const FLOW: Status[] = [
   "Yet to Start",
   "In Progress",
-  "PR review",
-  "Ready to Merge",
-  "Pending Prod Push",
+  "PR created",
   "In testing",
   "Completed",
 ];

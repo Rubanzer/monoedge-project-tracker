@@ -33,7 +33,7 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
  * priority: a full-height stripe down the left edge.
  *
  * The exception is In progress, which holds four statuses. Those cards show
- * which one, as a menu — moving PR review → Ready to Merge is the commonest
+ * which one, as a menu — moving In Progress → PR created is the commonest
  * edit on the board and should not cost a trip through the detail panel.
  *
  * This is a single interactive node: dnd-kit's drag attributes sit on the

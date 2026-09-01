@@ -130,39 +130,53 @@ export default function TrackerPage() {
 
       {view === "board" && items.length > 0 && <PipelineRail items={visible} />}
 
-      <div className="min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 flex-col">
+        {/* An empty board still shows its columns. The stages are the thing
+            worth learning on the first run, and a centred message in place of
+            them taught nothing and hid the "add" affordance each column
+            already carries. The hint sits above the board rather than
+            replacing it. */}
+        {!loading && view === "board" && items.length === 0 && (
+          <FirstRun onAdd={() => openComposer()} />
+        )}
+
         {loading ? (
           <BoardSkeleton />
-        ) : items.length === 0 ? (
+        ) : view === "sheet" && items.length === 0 ? (
           <EmptyBoard onAdd={() => openComposer()} />
-        ) : visible.length === 0 ? (
+        ) : items.length > 0 && visible.length === 0 ? (
           <NoMatches onClear={clearFilters} />
         ) : view === "board" ? (
-          <KanbanBoard
-            items={visible}
-            groupBy={groupBy}
-            showParked={showParked}
-            onOpen={select}
-            onAdd={openComposer}
-            onStatus={(id, status) => void patchItem(id, { status })}
-            onMove={(id, columnId, index, assigneeId) => {
-              const item = items.find((i) => i.id === id);
-              void moveItem(id, columnId, index, assigneeId);
-              if (!item) return;
+          // The board is a flex child now that the first-run hint can sit
+          // above it, so it takes the remaining height rather than 100% of a
+          // container the hint has already eaten into.
+          <div className="min-h-0 flex-1">
+            <KanbanBoard
+              items={visible}
+              groupBy={groupBy}
+              showParked={showParked}
+              onOpen={select}
+              onAdd={openComposer}
+              onStatus={(id, status) => void patchItem(id, { status })}
+              onMove={(id, columnId, index, assigneeId) => {
+                const item = items.find((i) => i.id === id);
+                void moveItem(id, columnId, index, assigneeId);
+                if (!item) return;
 
-              const next = statusForDrop(item, columnId);
-              if (next === item.status) return;
+                const next = statusForDrop(item, columnId);
+                if (next === item.status) return;
 
-              toast(`MON-${item.ref} → ${next}`, {
-                description:
-                  next === "Completed"
-                    ? "Actual date stamped with today."
-                    : !item.startedDate
-                      ? "Started date stamped with today."
-                      : undefined,
-              });
-            }}
-          />
+                toast(`MON-${item.ref} → ${next}`, {
+                  description:
+                    next === "Completed"
+                      ? "Actual date stamped with today."
+                      : !item.startedDate
+                        ? "Started date stamped with today."
+                        : undefined,
+                });
+              }}
+            />
+          </div>
         ) : (
           <SheetTable items={visible} onOpen={select} />
         )}
@@ -189,8 +203,9 @@ export default function TrackerPage() {
 function BoardSkeleton() {
   return (
     <div className="flex h-full gap-3 p-4 sm:px-6" aria-busy>
+      {/* Same widths as the real columns, so nothing jumps when it loads. */}
       {Array.from({ length: 5 }).map((_, col) => (
-        <div key={col} className="w-[276px] shrink-0 space-y-2">
+        <div key={col} className="min-w-[236px] flex-1 basis-0 space-y-2">
           <Skeleton className="h-9 rounded-lg" />
           {Array.from({ length: 3 - (col % 3) }).map((__, card) => (
             <Skeleton key={card} className="h-[86px] rounded-lg" />
@@ -201,6 +216,28 @@ function BoardSkeleton() {
   );
 }
 
+/**
+ * First run, board view. One line and one control, sitting above a board that
+ * is already showing all five stages — so the columns do the explaining and
+ * this only says what to do next. It states plainly whether the sheet is
+ * connected, because that is the one thing the columns cannot show.
+ */
+function FirstRun({ onAdd }: { onAdd: () => void }) {
+  return (
+    <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-rule px-4 py-2.5 sm:px-6">
+      <p className="text-[12px] text-muted-foreground">
+        {repository.remote
+          ? "No work items yet. Add one and it reaches the sheet within about half a minute."
+          : "No work items yet. These are kept in this browser until the tracking sheet is connected."}
+      </p>
+      <Button size="sm" className="h-7 text-[12px]" onClick={onAdd}>
+        Add the first work item
+      </Button>
+    </div>
+  );
+}
+
+/** Sheet view has no columns to fall back on, so it keeps a plain message. */
 function EmptyBoard({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="flex h-full items-center justify-center px-6">

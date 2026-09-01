@@ -5,17 +5,24 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ---------------------------------------------------------------
-   Monoedge Tracker — palette derived from the Google Sheet header
-   green (#1A6B4A). Neutrals carry a green cast so chrome and brand
-   read as one material rather than brand-on-grey.
+   MonoEdge Tracker — the MonoEdge Systems palette.
+
+     MonoEdge Blue  #204494    Ice Blue  #85A9DD
+     Pure White     #FFFFFF    Void Black #000000
+
+   Neutrals are mixed toward MonoEdge Blue rather than left grey, so
+   chrome and brand read as one material. Light mode carries the blue
+   at full strength; dark mode hands the accent role to Ice Blue,
+   because #204494 on a near-black ground is unreadable.
    --------------------------------------------------------------- */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-jetbrains), ui-monospace, monospace;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
-  --font-heading: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-jetbrains), ui-monospace, monospace;
+  --font-display: var(--font-monument), "Arial Black", Impact, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,6 +55,7 @@
   --color-brand: var(--brand);
   --color-brand-deep: var(--brand-deep);
   --color-brand-tint: var(--brand-tint);
+  --color-ice: var(--ice);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -59,87 +67,89 @@
 :root {
   --radius: 0.5rem;
 
-  --background: #f1f4f0;
-  --foreground: #0c1b14;
-  --canvas: #e7ebe6;
+  --background: #f4f6fb;
+  --foreground: #0a1020;
+  --canvas: #e9edf6;
 
   --card: #ffffff;
-  --card-foreground: #0c1b14;
+  --card-foreground: #0a1020;
   --popover: #ffffff;
-  --popover-foreground: #0c1b14;
+  --popover-foreground: #0a1020;
 
-  --primary: #1a6b4a;
+  --primary: #204494;
   --primary-foreground: #ffffff;
-  --secondary: #e9ede8;
-  --secondary-foreground: #1d2b23;
+  --secondary: #e7ecf7;
+  --secondary-foreground: #1b2540;
 
-  --muted: #eef1ed;
-  --muted-foreground: #5c6b62;
-  --accent: #e4ece7;
-  --accent-foreground: #10412c;
+  --muted: #eef1f8;
+  --muted-foreground: #556080;
+  --accent: #dfe7f6;
+  --accent-foreground: #16306b;
 
-  --destructive: #c02626;
+  --destructive: #c0261f;
 
-  --border: #dee4dd;
-  --input: #d5ddd4;
-  --ring: #1a6b4a;
+  --border: #d9e0ee;
+  --input: #ccd6e8;
+  --ring: #204494;
 
-  --rule: #e4e9e2;
-  --rule-strong: #cfd8ce;
-  --brand: #1a6b4a;
-  --brand-deep: #0b3d2a;
-  --brand-tint: #e2efe8;
+  --rule: #e2e8f4;
+  --rule-strong: #c6d0e4;
+  --brand: #204494;
+  --brand-deep: #14265a;
+  --brand-tint: #e4ebf9;
+  --ice: #85a9dd;
 
   --sidebar: #ffffff;
-  --sidebar-foreground: #0c1b14;
-  --sidebar-primary: #1a6b4a;
+  --sidebar-foreground: #0a1020;
+  --sidebar-primary: #204494;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #eef1ed;
-  --sidebar-accent-foreground: #0c1b14;
-  --sidebar-border: #dee4dd;
-  --sidebar-ring: #1a6b4a;
+  --sidebar-accent: #eef1f8;
+  --sidebar-accent-foreground: #0a1020;
+  --sidebar-border: #d9e0ee;
+  --sidebar-ring: #204494;
 }
 
 .dark {
-  --background: #0a100d;
-  --foreground: #e6ece8;
-  --canvas: #070c09;
+  --background: #070b14;
+  --foreground: #e6ebf5;
+  --canvas: #05070d;
 
-  --card: #121b16;
-  --card-foreground: #e6ece8;
-  --popover: #141e18;
-  --popover-foreground: #e6ece8;
+  --card: #0e131e;
+  --card-foreground: #e6ebf5;
+  --popover: #131926;
+  --popover-foreground: #e6ebf5;
 
-  --primary: #3fae7a;
-  --primary-foreground: #05130c;
-  --secondary: #1a2620;
-  --secondary-foreground: #dbe5df;
+  --primary: #85a9dd;
+  --primary-foreground: #06101f;
+  --secondary: #172033;
+  --secondary-foreground: #d7e0f0;
 
-  --muted: #161f1a;
-  --muted-foreground: #8a9a90;
-  --accent: #1b2a22;
-  --accent-foreground: #e6ece8;
+  --muted: #131a28;
+  --muted-foreground: #8a97b0;
+  --accent: #1a2438;
+  --accent-foreground: #e6ebf5;
 
   --destructive: #e05a5a;
 
-  --border: #212e27;
-  --input: #2a3830;
-  --ring: #3fae7a;
+  --border: #1e2839;
+  --input: #27334a;
+  --ring: #85a9dd;
 
-  --rule: #1c2721;
-  --rule-strong: #2b3a32;
-  --brand: #3fae7a;
-  --brand-deep: #9fd9bd;
-  --brand-tint: #14271e;
+  --rule: #1a2333;
+  --rule-strong: #2b3750;
+  --brand: #85a9dd;
+  --brand-deep: #b9cdec;
+  --brand-tint: #142138;
+  --ice: #85a9dd;
 
-  --sidebar: #0e1512;
-  --sidebar-foreground: #e6ece8;
-  --sidebar-primary: #3fae7a;
-  --sidebar-primary-foreground: #05130c;
-  --sidebar-accent: #161f1a;
-  --sidebar-accent-foreground: #e6ece8;
-  --sidebar-border: #212e27;
-  --sidebar-ring: #3fae7a;
+  --sidebar: #0b0f19;
+  --sidebar-foreground: #e6ebf5;
+  --sidebar-primary: #85a9dd;
+  --sidebar-primary-foreground: #06101f;
+  --sidebar-accent: #131a28;
+  --sidebar-accent-foreground: #e6ebf5;
+  --sidebar-border: #1e2839;
+  --sidebar-ring: #85a9dd;
 }
 
 @layer base {
@@ -148,7 +158,10 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "cv05" 1, "ss01" 1;
+    /* JetBrains Mono ships code ligatures on. Nothing in a tracker is code,
+       and "->" inside a task title turning into an arrow is a surprise, so
+       contextual alternates are off and the slashed zero is on instead. */
+    font-feature-settings: "calt" 0, "liga" 0, "zero" 1;
   }
   html {
     @apply font-sans;
@@ -163,6 +176,16 @@
   }
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Monument Extended, caps only and never more than a couple of words. It
+     is wide enough that a sentence set in it stops being readable, so it is
+     reserved for the wordmark and one or two display moments. */
+  .display-mark {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    font-weight: 400;
   }
 }
 

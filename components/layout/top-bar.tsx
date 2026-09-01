@@ -27,15 +27,68 @@ import { relativeTime } from "@/lib/dates";
 import { repository } from "@/lib/repositories";
 import type { SyncState } from "@/lib/types";
 
-/** A hard edge cut off one corner — mono, with an edge. */
+/**
+ * The MonoEdge symbol, from the brand assets. The two strokes take
+ * `currentColor` so the mark inverts with the theme the way the black and
+ * white lockups do; the descending wings keep the MonoEdge Blue → Ice Blue
+ * gradient, which is the one place the gradient is allowed to appear.
+ *
+ * The second gradient is the first mirrored about the artboard centre
+ * (x' = 410.4 − x) rather than the source file's rotate-and-translate, which
+ * is the same geometry written in a way a human can check.
+ */
 function Mark() {
   return (
-    <svg viewBox="0 0 20 20" className="size-[19px]" aria-hidden>
+    <svg
+      viewBox="0 0 410.4 288"
+      className="h-[19px] w-auto text-foreground"
+      role="img"
+      aria-label="MonoEdge Systems"
+    >
+      <defs>
+        <linearGradient
+          id="me-wing-right"
+          x1="370.12"
+          y1="108.33"
+          x2="295.97"
+          y2="244.19"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0.03" stopColor="#204494" />
+          <stop offset="0.41" stopColor="#3256a1" />
+          <stop offset="0.84" stopColor="#698dc9" />
+          <stop offset="1" stopColor="#85a9dd" />
+        </linearGradient>
+        <linearGradient
+          id="me-wing-left"
+          x1="40.28"
+          y1="108.33"
+          x2="114.43"
+          y2="244.19"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0.03" stopColor="#204494" />
+          <stop offset="0.41" stopColor="#3256a1" />
+          <stop offset="0.84" stopColor="#698dc9" />
+          <stop offset="1" stopColor="#85a9dd" />
+        </linearGradient>
+      </defs>
       <path
-        d="M0 4a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H4a4 4 0 0 1-4-4V4Z"
-        fill="var(--brand)"
+        fill="currentColor"
+        d="M97.36,35.83h-53.81v49.15c34.26,34.26,67.05,67.05,101.31,101.31,17.94-17.94,33.32-33.77,51.25-51.71-34.26-34.26-64.49-64.49-98.76-98.76Z"
       />
-      <path d="M20 4v9.5L6.5 0H16a4 4 0 0 1 4 4Z" fill="#fff" fillOpacity="0.34" />
+      <polygon
+        fill="currentColor"
+        points="314.16 35.83 151.59 198.18 151.59 251.99 201.28 252.18 366.85 86.63 366.85 35.82 314.16 35.83"
+      />
+      <path
+        fill="url(#me-wing-right)"
+        d="M366.85,106.54c-31.41,31.39-62.82,62.46-94.23,93.85v50.63s28.63,0,28.63,0c16.19,0,31.72-6.46,43.13-17.96,1.61-1.62,3.23-3.25,4.83-4.87,11.3-11.38,17.63-26.77,17.63-42.8v-78.85Z"
+      />
+      <path
+        fill="url(#me-wing-left)"
+        d="M43.55,106.54c31.41,31.39,62.82,62.46,94.23,93.85v50.63s-28.63,0-28.63,0c-16.19,0-31.72-6.46-43.13-17.96-1.61-1.62-3.23-3.25-4.83-4.87-11.3-11.38-17.63-26.77-17.63-42.8v-78.85Z"
+      />
     </svg>
   );
 }
@@ -187,11 +240,11 @@ export function TopBar({
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-rule bg-card px-4 sm:px-6">
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2.5">
         <Mark />
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-[15px] font-semibold tracking-[-0.015em]">
-            Monoedge
+        <div className="flex items-baseline gap-2">
+          <span className="display-mark text-[13px] leading-none">
+            MonoEdge
           </span>
           <span className="label-mono hidden text-muted-foreground sm:inline">
             Tracker

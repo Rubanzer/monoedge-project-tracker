@@ -38,12 +38,13 @@ check("sheet says Testing", statusOf("Testing"), "In testing");
 check("legacy Testing done", statusOf("Testing done"), "In testing");
 check("new In testing", statusOf("In testing"), "In testing");
 check("sheet says Define Approach", statusOf("Define Approach"), "In Progress");
-check("sheet says PR review", statusOf("PR review"), "PR review");
-check("sheet says Ready to Merge", statusOf("Ready to Merge"), "Ready to Merge");
+check("new PR created", statusOf("PR created"), "PR created");
+check("legacy PR review", statusOf("PR review"), "PR created");
+check("legacy Ready to Merge", statusOf("Ready to Merge"), "PR created");
 check(
-  "sheet says Pending Prod Push",
+  "legacy Pending Prod Push",
   statusOf("Pending Prod Push"),
-  "Pending Prod Push",
+  "PR created",
 );
 check("sheet says Completed", statusOf("Completed"), "Completed");
 check("sheet says On-hold", statusOf("On-hold"), "On-hold");
@@ -83,7 +84,7 @@ const item = {
   title: "Rate limit the public API",
   description: "One integration is hammering us.",
   assigneeId: "vismay",
-  status: "PR review" as const,
+  status: "PR created" as const,
   createdDate: "2026-08-14",
   startedDate: "2026-08-15",
   plannedDate: "2026-08-22",

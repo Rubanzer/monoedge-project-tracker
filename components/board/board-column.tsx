@@ -45,8 +45,17 @@ export function BoardColumn({
     <section
       data-column={column.id}
       className={cn(
-        "flex w-[276px] shrink-0 flex-col",
-        dense ? "h-auto" : "h-full",
+        "flex flex-col",
+        dense
+          ? // Swimlanes: every lane must line its stages up with every other
+            // lane, so the width is fixed and the row scrolls as one.
+            "h-auto w-[276px] shrink-0"
+          : // Flat: share the viewport out between the stages, down to a
+            // floor where a card stops being readable — 236px, which is exactly
+            // what lets five columns fit a 1280 laptop. Past that the board
+            // scrolls rather than squeezing further, so a laptop gets five
+            // usable columns and a wide monitor gets no dead margin.
+            "h-full min-w-[236px] flex-1 basis-0",
       )}
       aria-label={`${column.label}, ${items.length} items`}
     >

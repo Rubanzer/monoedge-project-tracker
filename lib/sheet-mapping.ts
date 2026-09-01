@@ -91,12 +91,17 @@ export const STATUS_ALIASES: Record<string, Status> = {
   "define approach": "In Progress",
   "in progress": "In Progress",
   wip: "In Progress",
-  "pr review": "PR review",
-  "in review": "PR review",
-  review: "PR review",
-  "ready to merge": "Ready to Merge",
-  "pending prod push": "Pending Prod Push",
-  "pending production push": "Pending Prod Push",
+  // Retired stages. Ready to Merge and Pending Prod Push were dropped from
+  // the set; both describe work whose pull request already exists, so they
+  // fold forward into PR created. Nothing is folded into Completed — the
+  // board must never claim something shipped on a guess.
+  "pr created": "PR created",
+  "pr review": "PR created",
+  "in review": "PR created",
+  review: "PR created",
+  "ready to merge": "PR created",
+  "pending prod push": "PR created",
+  "pending production push": "PR created",
   testing: "In testing",
   "testing done": "In testing",
   "in testing": "In testing",
