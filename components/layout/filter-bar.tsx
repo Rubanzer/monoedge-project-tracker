@@ -8,11 +8,6 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { PRIORITY_TOKENS, TEAM, TYPE_TOKENS } from "@/lib/constants";
 import { PRIORITIES, WORK_TYPES } from "@/lib/types";
@@ -116,40 +111,28 @@ export function FilterBar({
 
       <span aria-hidden className="hidden h-5 w-px bg-rule sm:block" />
 
-      {/* People filter as avatars — faster to hit than a menu, and the
-          colours are the same ones used on every card. */}
-      <div className="flex items-center gap-1">
-        {people.map((p) => {
-          const on = filters.assigneeIds.includes(p.id);
-          return (
-            <Tooltip key={p.id}>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() =>
-                    onFilters({ assigneeIds: toggle(filters.assigneeIds, p.id) })
-                  }
-                  className={cn(
-                    "rounded-full p-0.5 transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                    on
-                      ? "bg-brand-tint ring-1 ring-primary/50"
-                      : "opacity-80 hover:opacity-100",
-                  )}
-                >
-                  <PersonAvatar
-                    memberId={p.id === "unassigned" ? null : p.id}
-                    size="sm"
-                  />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">{p.name}</TooltipContent>
-            </Tooltip>
-          );
-        })}
-      </div>
-
-      <span aria-hidden className="hidden h-5 w-px bg-rule sm:block" />
+      {/* Person sits first among the menus: who is on it is the question
+          asked most often, and the trigger keeps the selected avatars in
+          view so the answer is readable without opening anything. */}
+      <FilterMenu
+        label="Person"
+        active={filters.assigneeIds.length}
+        badge={<AvatarStack ids={filters.assigneeIds} />}
+        options={people.map((p) => ({
+          value: p.id,
+          label: p.name,
+          leading: (
+            <PersonAvatar
+              memberId={p.id === "unassigned" ? null : p.id}
+              size="sm"
+            />
+          ),
+        }))}
+        selected={filters.assigneeIds}
+        onToggle={(v) =>
+          onFilters({ assigneeIds: toggle(filters.assigneeIds, v) })
+        }
+      />
 
       <FilterMenu
         label="Priority"
@@ -251,18 +234,57 @@ function Toggle({
   );
 }
 
+/**
+ * Up to three selected avatars, then a count for the rest. Stands in for the
+ * plain number badge on the Person menu so a glance at the closed trigger
+ * still says *who*, which is what the old avatar strip was good at.
+ */
+function AvatarStack({ ids }: { ids: string[] }) {
+  const shown = ids.slice(0, 3);
+  const rest = ids.length - shown.length;
+
+  return (
+    <span className="flex items-center">
+      {shown.map((id, i) => (
+        <PersonAvatar
+          key={id}
+          memberId={id === "unassigned" ? null : id}
+          size="sm"
+          // Overlap all but the first, so four chips still fit the 8px gap.
+          className={cn("ring-1 ring-card", i > 0 && "-ml-1.5")}
+        />
+      ))}
+      {rest > 0 && (
+        <span className="ml-1 text-[9px] text-muted-foreground tabular">
+          +{rest}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function FilterMenu({
   label,
   options,
   selected,
   onToggle,
   active,
+  badge,
 }: {
   label: string;
-  options: { value: string; label: string; color: string }[];
+  options: {
+    value: string;
+    label: string;
+    /** Renders the usual colour dot. Ignored when `leading` is given. */
+    color?: string;
+    /** Replaces the dot, for options that carry their own mark. */
+    leading?: React.ReactNode;
+  }[];
   selected: string[];
   onToggle: (v: string) => void;
   active: number;
+  /** Replaces the count badge when a selection needs richer shorthand. */
+  badge?: React.ReactNode;
 }) {
   return (
     <DropdownMenu>
@@ -278,11 +300,12 @@ function FilterMenu({
           )}
         >
           {label}
-          {active > 0 && (
-            <span className="rounded-full bg-primary px-1.5 text-[9px] leading-4 text-primary-foreground tabular">
-              {active}
-            </span>
-          )}
+          {active > 0 &&
+            (badge ?? (
+              <span className="rounded-full bg-primary px-1.5 text-[9px] leading-4 text-primary-foreground tabular">
+                {active}
+              </span>
+            ))}
           <ChevronDown className="size-3 opacity-60" />
         </button>
       </DropdownMenuTrigger>
@@ -296,7 +319,8 @@ function FilterMenu({
             className="text-[13px]"
           >
             <span className="flex items-center gap-2">
-              <i className="dot" style={tone(o.color)} />
+              {o.leading ??
+                (o.color ? <i className="dot" style={tone(o.color)} /> : null)}
               {o.label}
             </span>
           </DropdownMenuCheckboxItem>
