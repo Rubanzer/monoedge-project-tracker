@@ -14,9 +14,9 @@ import {
   ALL_COLUMNS,
   PRIORITY_TOKENS,
   STATUS_TOKENS,
-  TEAM,
   TYPE_TOKENS,
 } from "@/lib/constants";
+import { useActiveMembers } from "@/lib/store";
 import { PRIORITIES, WORK_TYPES } from "@/lib/types";
 import type { Priority, Status, WorkType } from "@/lib/types";
 import { PersonAvatar } from "@/components/shared/person-avatar";
@@ -161,6 +161,8 @@ export function AssigneeSelect({
   label?: string;
   placeholder?: string;
 }) {
+  const members = useActiveMembers();
+
   return (
     <Select
       value={value ?? UNASSIGNED}
@@ -179,7 +181,7 @@ export function AssigneeSelect({
             {placeholder}
           </span>
         </SelectItem>
-        {TEAM.map((m) => (
+        {members.map((m) => (
           <SelectItem key={m.id} value={m.id} className="text-[13px]">
             <span className="flex items-center gap-2">
               <PersonAvatar memberId={m.id} size="sm" />

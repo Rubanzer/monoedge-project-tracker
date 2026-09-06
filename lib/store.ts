@@ -1,13 +1,15 @@
 "use client";
 
+import { useMemo } from "react";
 import { create } from "zustand";
 import { repository } from "./repositories";
 import { RepositoryError } from "./repository";
 import { todayIso } from "./dates";
-import { STARTED_STAGES, TERMINAL_STAGES, columnById } from "./constants";
+import { STARTED_STAGES, TEAM, TERMINAL_STAGES, columnById } from "./constants";
 import type {
   Filters,
   GroupBy,
+  Member,
   NewWorkItem,
   Status,
   SyncState,
@@ -63,6 +65,12 @@ const describe = (e: unknown, fallback: string) =>
 
 interface TrackerState {
   items: WorkItem[];
+  /**
+   * The roster, as the backend has it. Seeded from the constant so the first
+   * paint has avatars, then replaced by whatever the Team tab says — which is
+   * how someone who signed in this morning becomes assignable this morning.
+   */
+  members: Member[];
   loading: boolean;
   sync: SyncState;
   lastSyncedAt: string | null;
@@ -99,6 +107,7 @@ interface TrackerState {
 
 export const useTracker = create<TrackerState>((set, get) => ({
   items: [],
+  members: TEAM,
   loading: true,
   sync: "idle",
   lastSyncedAt: null,
@@ -113,9 +122,10 @@ export const useTracker = create<TrackerState>((set, get) => ({
   async load() {
     set({ loading: true, sync: "syncing" });
     try {
-      const { items, warnings } = await repository.list();
+      const { items, warnings, members } = await repository.list();
       set({
         items,
+        ...(members?.length ? { members } : {}),
         warnings: warnings ?? [],
         loading: false,
         sync: "synced",
@@ -137,9 +147,12 @@ export const useTracker = create<TrackerState>((set, get) => ({
     const { sync, selectedId, composerOpen } = get();
     if (sync === "syncing" || selectedId || composerOpen) return;
     try {
-      const { items, warnings } = await repository.list();
+      const { items, warnings, members } = await repository.list();
       set({
         items,
+        // Someone signing in mid-session joins the roster on their first
+        // request; the poll is how everyone else's board finds out.
+        ...(members?.length ? { members } : {}),
         warnings: warnings ?? [],
         lastSyncedAt: new Date().toISOString(),
         sync: "synced",
@@ -365,3 +378,26 @@ export const isFiltered = (f: Filters): boolean =>
 
 export const byOrder = (a: WorkItem, b: WorkItem): number =>
   a.order - b.order || a.ref - b.ref;
+
+/**
+ * Roster selectors. Components read people from here rather than importing
+ * the TEAM constant, so a joiner discovered in the Team tab shows up
+ * everywhere at once — pickers, avatars, filters and swimlanes.
+ */
+export const useMembers = () => useTracker((s) => s.members);
+
+/**
+ * Everyone assignable now. Someone stood down keeps their avatar on the work
+ * they already own, but must not be handed anything new.
+ *
+ * Memoised rather than filtered inside the selector: a selector that builds
+ * a new array every call never compares equal, and useSyncExternalStore
+ * re-renders forever on that.
+ */
+export const useActiveMembers = () => {
+  const members = useMembers();
+  return useMemo(() => members.filter((m) => m.active !== false), [members]);
+};
+
+export const useMember = (id: string | null | undefined) =>
+  useTracker((s) => (id ? s.members.find((m) => m.id === id) : undefined));

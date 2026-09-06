@@ -191,6 +191,9 @@ export function rowToItem(
   row: unknown[],
   rowNumber: number,
   warnings: string[],
+  /** The roster as the Team tab has it. Defaults to the seed list so the
+   *  local draft backend and the mapping tests need no sheet. */
+  team: Member[] = TEAM,
 ): WorkItem | null {
   const cell = (col: string) => row[colIndex(col)];
 
@@ -226,20 +229,20 @@ export function rowToItem(
   }
 
   const personName = str(cell(COLS.person));
-  const member = resolveMember(personName, str(cell(COLS.assigneeKey)));
+  const member = resolveMember(personName, str(cell(COLS.assigneeKey)), team);
   const assigneeId = member?.id ?? null;
   if (personName && !assigneeId) {
     warnings.push(
-      `Row ${rowNumber}: "${personName}" is not on the team list — add them to TEAM in lib/constants.ts`,
+      `Row ${rowNumber}: "${personName}" is not on the team — add them to the Team tab`,
     );
   }
 
   const secondName = str(cell(COLS.secondaryPerson));
-  const second = resolveMember(secondName, str(cell(COLS.secondaryKey)));
+  const second = resolveMember(secondName, str(cell(COLS.secondaryKey)), team);
   const secondaryAssigneeId = second?.id ?? null;
   if (secondName && !secondaryAssigneeId) {
     warnings.push(
-      `Row ${rowNumber}: secondary person "${secondName}" is not on the team list — add them to TEAM in lib/constants.ts`,
+      `Row ${rowNumber}: secondary person "${secondName}" is not on the team — add them to the Team tab`,
     );
   }
 
@@ -282,9 +285,9 @@ export function highestRef(items: { id: string }[]): number {
 }
 
 /** The A..Q cells for a whole row, in column order. */
-export function itemToRow(item: WorkItem): unknown[] {
-  const member = TEAM.find((m) => m.id === item.assigneeId);
-  const second = TEAM.find((m) => m.id === item.secondaryAssigneeId);
+export function itemToRow(item: WorkItem, team: Member[] = TEAM): unknown[] {
+  const member = team.find((m) => m.id === item.assigneeId);
+  const second = team.find((m) => m.id === item.secondaryAssigneeId);
   return [
     item.title,
     item.description,

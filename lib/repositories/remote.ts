@@ -52,7 +52,11 @@ export const remoteRepository: TrackerRepository = {
 
   async list() {
     const data = await send<LoadResult>("/api/items");
-    return { items: data?.items ?? [], warnings: data?.warnings ?? [] };
+    return {
+      items: data?.items ?? [],
+      warnings: data?.warnings ?? [],
+      members: data?.members,
+    };
   },
 
   async create(item) {

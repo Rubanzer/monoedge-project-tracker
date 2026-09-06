@@ -9,7 +9,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { PRIORITY_TOKENS, TEAM, TYPE_TOKENS } from "@/lib/constants";
+import { PRIORITY_TOKENS, TYPE_TOKENS } from "@/lib/constants";
+import { useMembers } from "@/lib/store";
 import { PRIORITIES, WORK_TYPES } from "@/lib/types";
 import type { Filters, GroupBy, Priority, WorkType } from "@/lib/types";
 import { PersonAvatar } from "@/components/shared/person-avatar";
@@ -85,6 +86,10 @@ export function FilterBar({
   visible: number;
   total: number;
 }) {
+  // Everyone, not just the assignable: work already owned by someone stood
+  // down must still be findable.
+  const members = useMembers();
+
   const dirty =
     filters.assigneeIds.length > 0 ||
     filters.priorities.length > 0 ||
@@ -93,7 +98,7 @@ export function FilterBar({
     filters.query.trim() !== "";
 
   const people = [
-    ...TEAM.map((m) => ({ id: m.id, name: m.name })),
+    ...members.map((m) => ({ id: m.id, name: m.name })),
     { id: "unassigned", name: "Unassigned" },
   ];
 

@@ -19,12 +19,10 @@ import {
   ALL_COLUMNS,
   COLUMNS,
   PARKED_COLUMN,
-  TEAM,
   columnForStatus,
-  memberById,
   type BoardColumnDef,
 } from "@/lib/constants";
-import { byOrder } from "@/lib/store";
+import { byOrder, useMembers } from "@/lib/store";
 import type { GroupBy, Status, WorkItem } from "@/lib/types";
 import { PersonAvatar } from "@/components/shared/person-avatar";
 import { BoardColumn } from "./board-column";
@@ -82,12 +80,13 @@ export function KanbanBoard({
     assigneeId?: string | null,
   ) => void;
 }) {
+  const members = useMembers();
   const lanes = useMemo(
     () =>
       groupBy === "assignee"
-        ? [...TEAM.map((m) => m.id), UNASSIGNED]
+        ? [...members.map((m) => m.id), UNASSIGNED]
         : [ALL_LANE],
-    [groupBy],
+    [groupBy, members],
   );
 
   const base = useMemo(
@@ -233,7 +232,10 @@ export function KanbanBoard({
         ) : (
           <div className="board-scroll flex h-full min-w-max flex-col gap-6 overflow-y-auto p-4 sm:px-6">
             {lanes.map((lane) => {
-              const member = memberById(lane === UNASSIGNED ? null : lane);
+              const member =
+                lane === UNASSIGNED
+                  ? undefined
+                  : members.find((m) => m.id === lane);
               const count = columns.reduce(
                 (n, c) => n + (cols[dropKey(c.id, lane)]?.length ?? 0),
                 0,

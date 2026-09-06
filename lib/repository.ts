@@ -1,9 +1,16 @@
-import type { WorkItem } from "./types";
+import type { Member, WorkItem } from "./types";
 
 export interface LoadResult {
   items: WorkItem[];
   /** Cells the importer could not read cleanly. Surfaced once, in the UI. */
   warnings?: string[];
+  /**
+   * Who the app may draw and assign to. A shared backend discovers this —
+   * anyone who signs in joins the roster — so it travels with the items
+   * rather than being compiled in. Absent from a backend with no notion of
+   * a team, and the seed list in constants.ts stands in.
+   */
+  members?: Member[];
 }
 
 /** Thrown by adapters so the store can tell a conflict from a real failure. */

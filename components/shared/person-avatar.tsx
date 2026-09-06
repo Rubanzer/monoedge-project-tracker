@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { memberById } from "@/lib/constants";
+import { useMember } from "@/lib/store";
 
 const SIZES = {
   sm: "size-5 text-[9px]",
@@ -18,7 +18,7 @@ export function PersonAvatar({
   size?: keyof typeof SIZES;
   className?: string;
 }) {
-  const member = memberById(memberId);
+  const member = useMember(memberId);
 
   if (!member) {
     return (

@@ -5,7 +5,7 @@ import { ArrowDown, ArrowUp, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PRIORITIES } from "@/lib/types";
 import type { WorkItem } from "@/lib/types";
-import { memberById } from "@/lib/constants";
+import { useMembers } from "@/lib/store";
 import { formatShort, isOverdue } from "@/lib/dates";
 import { PersonAvatar } from "@/components/shared/person-avatar";
 import {
@@ -49,6 +49,12 @@ export function SheetTable({
     dir: 1,
   });
 
+  const members = useMembers();
+  const memberOf = useMemo(() => {
+    const byId = new Map(members.map((m) => [m.id, m]));
+    return (id: string | null) => (id ? byId.get(id) : undefined);
+  }, [members]);
+
   const rows = useMemo(() => {
     const value = (i: WorkItem): string | number => {
       switch (sort.key) {
@@ -63,7 +69,7 @@ export function SheetTable({
         case "priority":
           return PRIORITIES.indexOf(i.priority);
         case "person":
-          return memberById(i.assigneeId)?.name ?? "zzz";
+          return memberOf(i.assigneeId)?.name ?? "zzz";
       }
     };
     return [...items].sort((a, b) => {
@@ -72,7 +78,7 @@ export function SheetTable({
       if (av === bv) return a.ref - b.ref;
       return (av > bv ? 1 : -1) * sort.dir;
     });
-  }, [items, sort]);
+  }, [items, sort, memberOf]);
 
   const press = (key: SortKey) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: 1 }));
@@ -127,8 +133,8 @@ export function SheetTable({
         <tbody>
           {rows.map((item, idx) => {
             const overdue = isOverdue(item);
-            const member = memberById(item.assigneeId);
-            const second = memberById(item.secondaryAssigneeId);
+            const member = memberOf(item.assigneeId);
+            const second = memberOf(item.secondaryAssigneeId);
             return (
               <tr
                 key={item.id}

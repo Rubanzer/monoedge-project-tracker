@@ -11,7 +11,8 @@ import {
   rowToItem,
   str,
 } from "@/lib/sheet-mapping";
-import type { WorkItem } from "@/lib/types";
+import type { Member, WorkItem } from "@/lib/types";
+import { loadTeam } from "./team-store";
 import {
   deleteRow,
   getTab,
@@ -29,18 +30,27 @@ export interface LoadResult {
   /** Surfaced in the app so bad cells are visible instead of silently coerced. */
   warnings: string[];
   tab: string;
+  /**
+   * The roster the rows were resolved against, sent on so the browser draws
+   * avatars and the assignee pickers from the same list the server mapped
+   * with. Without it a new joiner exists for sign-in and nowhere else.
+   */
+  members: Member[];
 }
 
 interface Ctx {
   config: SheetConfig;
   tab: string;
   sheetId: number;
+  team: Member[];
 }
 
 async function ctx(): Promise<Ctx> {
   const config = readConfig();
-  const meta = await getTab(config);
-  return { config, tab: meta.title, sheetId: meta.sheetId };
+  // Both in flight at once: the roster lives in a different tab of the same
+  // spreadsheet and neither call depends on the other.
+  const [meta, team] = await Promise.all([getTab(config), loadTeam()]);
+  return { config, tab: meta.title, sheetId: meta.sheetId, team };
 }
 
 /**
@@ -92,11 +102,11 @@ export async function loadItems(): Promise<LoadResult> {
 
   const warnings: string[] = [];
   const items = rows
-    .map((row, i) => rowToItem(row, FIRST_DATA_ROW + i, warnings))
+    .map((row, i) => rowToItem(row, FIRST_DATA_ROW + i, warnings, c.team))
     .filter((i): i is WorkItem => i !== null);
 
   await backfillIds(c, items);
-  return { items, warnings, tab: c.tab };
+  return { items, warnings, tab: c.tab, members: c.team };
 }
 
 async function findRow(c: Ctx, id: string): Promise<number> {
@@ -166,7 +176,7 @@ export async function createItem(item: WorkItem): Promise<WorkItem> {
   };
   const row = await nextFreeRow(c);
   await writeRanges(c.config, c.tab, [
-    { a1: `A${row}:${LAST_COL}${row}`, values: [itemToRow(saved)] },
+    { a1: `A${row}:${LAST_COL}${row}`, values: [itemToRow(saved, c.team)] },
   ]);
   return { ...saved, sheetRow: row };
 }
@@ -191,7 +201,7 @@ export async function updateItem(
       await readRange(c.config, c.tab, `A${rowNumber}:${LAST_COL}${rowNumber}`)
     )[0] ?? [];
 
-  const current = rowToItem(row, rowNumber, []);
+  const current = rowToItem(row, rowNumber, [], c.team);
   if (!current) throw new SheetError(`${id} row is empty.`, 409);
 
   guard?.(current);
@@ -219,7 +229,10 @@ export async function updateItem(
   };
 
   await writeRanges(c.config, c.tab, [
-    { a1: `A${rowNumber}:${LAST_COL}${rowNumber}`, values: [itemToRow(next)] },
+    {
+      a1: `A${rowNumber}:${LAST_COL}${rowNumber}`,
+      values: [itemToRow(next, c.team)],
+    },
   ]);
   return next;
 }
@@ -238,7 +251,7 @@ export async function removeItem(
       (
         await readRange(c.config, c.tab, `A${rowNumber}:${LAST_COL}${rowNumber}`)
       )[0] ?? [];
-    const current = rowToItem(row, rowNumber, []);
+    const current = rowToItem(row, rowNumber, [], c.team);
     if (current) guard(current);
   }
 

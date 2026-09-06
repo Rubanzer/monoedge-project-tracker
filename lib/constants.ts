@@ -1,8 +1,13 @@
 import type { Member, Priority, Status, WorkType } from "./types";
 
 /**
- * The team. id, name, initials and a colour is all it takes; avatars,
- * filters, swimlanes and the assignee picker all read from this one list.
+ * The founding team — a *seed*, not the roster.
+ *
+ * The live roster is the Team tab, discovered at sign-in and served with the
+ * board (see lib/server/team-store.ts). This list only fills an empty tab,
+ * and stands in before the first load returns. Nothing renders from it
+ * directly: read people through the store selectors in lib/store.ts, or a
+ * joiner is assignable to the server and invisible in the browser.
  *
  * `id` is what gets written to the sheet's Primary Person column, so keep it
  * stable once work has been assigned.
@@ -54,15 +59,6 @@ export const TEAM: Member[] = [
     color: "#9E2F4E",
   },
 ];
-
-export const memberByEmail = (email: string | null | undefined) => {
-  const key = email?.trim().toLowerCase();
-  if (!key) return undefined;
-  return TEAM.find((m) => m.email?.toLowerCase() === key);
-};
-
-export const memberById = (id: string | null): Member | undefined =>
-  id ? TEAM.find((m) => m.id === id) : undefined;
 
 interface Token {
   color: string;

@@ -44,6 +44,16 @@ export async function GET() {
     return Response.json({
       ...result,
       items: visibleTo(member, result.items),
+      // The browser draws people and assigns work to them; it never needs
+      // their address, so it does not get one.
+      members: result.members.map((m) => ({
+        id: m.id,
+        name: m.name,
+        initials: m.initials,
+        role: m.role,
+        color: m.color,
+        active: m.active,
+      })),
     });
   } catch (e) {
     return fail(e);
