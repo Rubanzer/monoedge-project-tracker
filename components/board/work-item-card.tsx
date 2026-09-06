@@ -70,7 +70,11 @@ export const WorkItemCard = forwardRef<HTMLDivElement, CardProps>(
           }
         }}
         className={cn(
-          "group relative w-full touch-none overflow-hidden rounded-lg border border-rule bg-card text-left",
+          // shrink-0 is load bearing. The column body is a flex column, so
+          // without it a full column compresses its cards to fit instead of
+          // scrolling — and since the card clips its own overflow, the title
+          // and status chip get sliced off mid-line.
+          "group relative w-full shrink-0 touch-none overflow-hidden rounded-lg border border-rule bg-card text-left",
           "shadow-[0_1px_2px_rgba(12,27,20,0.04)] transition-[border-color,box-shadow] duration-150",
           "hover:border-rule-strong hover:shadow-[0_2px_10px_rgba(12,27,20,0.07)]",
           "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:outline-none",
