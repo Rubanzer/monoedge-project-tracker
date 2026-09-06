@@ -22,7 +22,9 @@ const HEADS: { key: SortKey | null; label: string; className?: string }[] = [
   { key: "title", label: "Tasks", className: "min-w-[280px]" },
   { key: null, label: "Description", className: "min-w-[200px]" },
   { key: "person", label: "Primary Person", className: "w-[172px]" },
+  { key: null, label: "Secondary Person", className: "w-[172px]" },
   { key: "status", label: "Status", className: "w-[168px]" },
+  { key: null, label: "Notes", className: "min-w-[180px]" },
   { key: null, label: "Created", className: "w-[92px]" },
   { key: null, label: "Started", className: "w-[92px]" },
   { key: "planned", label: "Planned", className: "w-[100px]" },
@@ -126,6 +128,7 @@ export function SheetTable({
           {rows.map((item, idx) => {
             const overdue = isOverdue(item);
             const member = memberById(item.assigneeId);
+            const second = memberById(item.secondaryAssigneeId);
             return (
               <tr
                 key={item.id}
@@ -156,7 +159,16 @@ export function SheetTable({
                   </span>
                 </Cell>
                 <Cell>
+                  <span className="flex items-center gap-2">
+                    <PersonAvatar memberId={item.secondaryAssigneeId} size="sm" />
+                    <span className="truncate">{second?.name ?? "—"}</span>
+                  </span>
+                </Cell>
+                <Cell>
                   <StatusChip status={item.status} />
+                </Cell>
+                <Cell className="text-muted-foreground">
+                  <span className="line-clamp-1">{item.notes || "—"}</span>
                 </Cell>
                 <Cell mono>{formatShort(item.createdDate)}</Cell>
                 <Cell mono>{formatShort(item.startedDate)}</Cell>

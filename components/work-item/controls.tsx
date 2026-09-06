@@ -151,16 +151,22 @@ export function TypeSelect({
 export function AssigneeSelect({
   value,
   onChange,
+  label = "Primary person",
+  /** "Unassigned" is right for an owner and wrong for a helper — nobody
+   *  helping is a normal state, not an unfilled one. */
+  placeholder = "Unassigned",
 }: {
   value: string | null;
   onChange: (v: string | null) => void;
+  label?: string;
+  placeholder?: string;
 }) {
   return (
     <Select
       value={value ?? UNASSIGNED}
       onValueChange={(v) => onChange(v === UNASSIGNED ? null : v)}
     >
-      <SelectTrigger className={triggerClass} aria-label="Primary person">
+      <SelectTrigger className={triggerClass} aria-label={label}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -170,7 +176,7 @@ export function AssigneeSelect({
         >
           <span className="flex items-center gap-2">
             <PersonAvatar memberId={null} size="sm" />
-            Unassigned
+            {placeholder}
           </span>
         </SelectItem>
         {TEAM.map((m) => (

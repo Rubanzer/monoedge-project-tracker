@@ -46,19 +46,26 @@ export interface WorkItem {
   description: string;
   /** Col C — Primary Person. Holds a Member.id, or null when unassigned. */
   assigneeId: string | null;
-  /** Col D — Status */
+  /** Col D — Secondary Person. The second pair of hands on the task; null
+   *  when nobody is helping. Never doubles as the owner — the board, the
+   *  filters and the permission rules all read Primary Person. */
+  secondaryAssigneeId: string | null;
+  /** Col E — Status */
   status: Status;
-  /** Col E — Task Creation Date */
+  /** Col F — Notes. Free text, kept apart from Description: the description
+   *  says what the task is, notes say what has happened since. */
+  notes: string;
+  /** Col G — Task Creation Date */
   createdDate: IsoDate | null;
-  /** Col F — Task Started Date */
+  /** Col H — Task Started Date */
   startedDate: IsoDate | null;
-  /** Col G — Task Planned Date (the due date) */
+  /** Col I — Task Planned Date (the due date) */
   plannedDate: IsoDate | null;
-  /** Col H — Task Actual Date (when it actually landed) */
+  /** Col J — Task Actual Date (when it actually landed) */
   actualDate: IsoDate | null;
-  /** Col I — Priority */
+  /** Col K — Priority */
   priority: Priority;
-  /** Col J — Functionality / Bug */
+  /** Col L — Functionality / Bug */
   type: WorkType | null;
 
   /** 1-based row this item occupies in the sheet. Set by the Sheets adapter

@@ -29,10 +29,12 @@ interface Draft {
   title: string;
   description: string;
   assigneeId: string | null;
+  secondaryAssigneeId: string | null;
   status: Status;
   priority: Priority;
   type: WorkType | null;
   plannedDate: string | null;
+  notes: string;
 }
 
 export function NewWorkItemDialog({
@@ -83,10 +85,12 @@ function Composer({
     title: "",
     description: "",
     assigneeId: defaultAssigneeId,
+    secondaryAssigneeId: null,
     status: defaultStatus,
     priority: "Medium",
     type: null,
     plannedDate: null,
+    notes: "",
   });
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) =>
@@ -101,7 +105,9 @@ function Composer({
       title,
       description: draft.description.trim(),
       assigneeId: draft.assigneeId,
+      secondaryAssigneeId: draft.secondaryAssigneeId,
       status: draft.status,
+      notes: draft.notes.trim(),
       priority: draft.priority,
       type: draft.type,
       createdDate: todayIso(),
@@ -147,6 +153,8 @@ function Composer({
           />
         </Field>
 
+        {/* Left column is about the work, right column is about people, so
+            Secondary person reads as a continuation of Primary person. */}
         <div className="grid grid-cols-2 gap-3">
           <Field label="Status">
             <StatusSelect
@@ -166,16 +174,32 @@ function Composer({
               onChange={(v) => set("priority", v)}
             />
           </Field>
+          <Field label="Secondary person">
+            <AssigneeSelect
+              label="Secondary person"
+              placeholder="Nobody"
+              value={draft.secondaryAssigneeId}
+              onChange={(v) => set("secondaryAssigneeId", v)}
+            />
+          </Field>
           <Field label="Functionality / Bug">
             <TypeSelect value={draft.type} onChange={(v) => set("type", v)} />
           </Field>
+          <DateField
+            label="Planned date"
+            value={draft.plannedDate}
+            onChange={(v) => set("plannedDate", v)}
+          />
         </div>
 
-        <DateField
-          label="Planned date"
-          value={draft.plannedDate}
-          onChange={(v) => set("plannedDate", v)}
-        />
+        <Field label="Notes">
+          <Textarea
+            value={draft.notes}
+            onChange={(e) => set("notes", e.target.value)}
+            placeholder="Anything worth recording as the task moves. Optional."
+            className="min-h-16 resize-y bg-card text-[13px] leading-relaxed"
+          />
+        </Field>
       </div>
 
       <DialogFooter className="gap-2">

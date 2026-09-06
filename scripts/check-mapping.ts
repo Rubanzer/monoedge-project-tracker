@@ -33,7 +33,8 @@ check("garbage text", toIsoDate("sometime next week"), null);
 
 // --- Status aliases: the sheet's current dropdown must all land somewhere.
 const statusOf = (raw: string) =>
-  rowToItem(["t", "", "", raw, "", "", "", "", "High", ""], 2, [])?.status;
+  rowToItem(["t", "", "", "", raw, "", "", "", "", "", "High", ""], 2, [])
+    ?.status;
 
 check("sheet says Testing", statusOf("Testing"), "In Testing");
 check("legacy Testing done", statusOf("Testing done"), "In Testing");
@@ -54,13 +55,17 @@ check("casing and spacing", statusOf("  in  progress "), "In Progress");
 check("blank defaults", statusOf(""), "Yet to Start");
 
 const warned: string[] = [];
-rowToItem(["t", "", "", "Marinating", "", "", "", "", "", ""], 7, warned);
+rowToItem(
+  ["t", "", "", "", "Marinating", "", "", "", "", "", "", ""],
+  7,
+  warned,
+);
 check("unknown status warns", warned.length, 1);
 
 // --- A row exactly as it exists in the sheet today: blank Tasks/Description/
-// Person, real dates and enums, and none of the K..N columns yet.
+// Person, real dates and enums, and none of the M..Q columns yet.
 const real = rowToItem(
-  ["", "", "", "In Progress", 46240, 46244, 46245, "", "High", ""],
+  ["", "", "", "", "In Progress", "", 46240, 46244, 46245, "", "High", ""],
   2,
   [],
 );
@@ -85,7 +90,9 @@ const item = {
   title: "Rate limit the public API",
   description: "One integration is hammering us.",
   assigneeId: "vismay",
+  secondaryAssigneeId: "tushar",
   status: "PR Created" as const,
+  notes: "Waiting on the load test before merging.",
   createdDate: "2026-08-14",
   startedDate: "2026-08-15",
   plannedDate: "2026-08-22",
@@ -102,6 +109,12 @@ check("round trip ref", back?.ref, item.ref);
 check("round trip title", back?.title, item.title);
 check("round trip status", back?.status, item.status);
 check("round trip assignee", back?.assigneeId, item.assigneeId);
+check(
+  "round trip secondary",
+  back?.secondaryAssigneeId,
+  item.secondaryAssigneeId,
+);
+check("round trip notes", back?.notes, item.notes);
 check("round trip planned", back?.plannedDate, item.plannedDate);
 check("round trip actual null", back?.actualDate, null);
 check("round trip type", back?.type, item.type);
@@ -112,7 +125,9 @@ check(
   itemToRow(item)[2],
   "Vismay Rathod",
 );
-check("column M is the stable key", itemToRow(item)[12], "vismay");
+check("column O is the stable key", itemToRow(item)[14], "vismay");
+check("column D is the readable secondary name", itemToRow(item)[3], "Tushar");
+check("column Q is the secondary key", itemToRow(item)[16], "tushar");
 
 // --- Reference numbering. A row with no Item ID yet carries a placeholder
 // ref derived from its row number. Counting those as claimed made a fresh
@@ -147,7 +162,7 @@ check("stranger", who("Someone Else"), null);
 check("ambiguous first name refuses", who("Priya"), null);
 check("ambiguous resolved by surname", who("Priya Menon"), "priya-m");
 check("ambiguous resolved by initials", who("PS"), "priya-s");
-// Column M wins over whatever the readable column says.
+// The stored key column wins over whatever the readable column says.
 check("stored key wins", who("Priya Menon", "vismay"), "vismay");
 check("unknown stored key falls back to name", who("Priya Menon", "ghost"), "priya-m");
 

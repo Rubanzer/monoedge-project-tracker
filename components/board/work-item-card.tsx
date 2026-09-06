@@ -158,6 +158,11 @@ export const WorkItemCard = forwardRef<HTMLDivElement, CardProps>(
                 {overdue && <AlertTriangle className="size-3" strokeWidth={2.5} />}
                 {formatShort(item.plannedDate)}
               </span>
+              {/* Owner last, so the rightmost avatar is always the person
+                  accountable for the card. */}
+              {item.secondaryAssigneeId && (
+                <PersonAvatar memberId={item.secondaryAssigneeId} size="sm" />
+              )}
               <PersonAvatar memberId={item.assigneeId} size="sm" />
             </div>
           </div>

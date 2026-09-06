@@ -74,6 +74,7 @@ function PanelBody({
   // keystroke does not become a write to the sheet.
   const [title, setTitle] = useState(item.title);
   const [description, setDescription] = useState(item.description);
+  const [notes, setNotes] = useState(item.notes);
 
   const patch = (p: Partial<WorkItem>) => onPatch(item.id, p);
   const overdue = isOverdue(item);
@@ -136,10 +137,30 @@ function PanelBody({
               onChange={(priority) => patch({ priority })}
             />
           </Field>
+          <Field label="Secondary person">
+            <AssigneeSelect
+              label="Secondary person"
+              placeholder="Nobody"
+              value={item.secondaryAssigneeId}
+              onChange={(secondaryAssigneeId) => patch({ secondaryAssigneeId })}
+            />
+          </Field>
           <Field label="Functionality / Bug">
             <TypeSelect value={item.type} onChange={(type) => patch({ type })} />
           </Field>
         </div>
+
+        <Field label="Notes">
+          <Textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            onBlur={() => {
+              if (notes !== item.notes) patch({ notes });
+            }}
+            placeholder="Where this has got to, blockers, anything said in passing."
+            className="min-h-20 resize-y bg-card text-[13px] leading-relaxed"
+          />
+        </Field>
 
         <Separator />
 

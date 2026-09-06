@@ -13,37 +13,44 @@ import type {
  * exercised directly; lib/server/sheet-store.ts wraps it with the Sheets
  * calls.
  *
- * A..J are the columns already in the tracking sheet and are left exactly as
- * they are. K..N are added by the app on first connect: without a stable ID,
+ * A..L are the columns already in the tracking sheet and are left exactly as
+ * they are. M..Q are added by the app on first connect: without a stable ID,
  * inserting a row above shifts every card's identity and edits land on the
  * wrong task.
+ *
+ * Secondary Person (D) and Notes (F) were inserted into the sheet by hand,
+ * which pushed everything to their right along by two columns.
  */
 export const COLS = {
   title: "A",
   description: "B",
   person: "C",
-  status: "D",
-  created: "E",
-  started: "F",
-  planned: "G",
-  actual: "H",
-  priority: "I",
-  type: "J",
-  id: "K",
-  order: "L",
-  assigneeKey: "M",
-  updatedAt: "N",
+  secondaryPerson: "D",
+  status: "E",
+  notes: "F",
+  created: "G",
+  started: "H",
+  planned: "I",
+  actual: "J",
+  priority: "K",
+  type: "L",
+  id: "M",
+  order: "N",
+  assigneeKey: "O",
+  updatedAt: "P",
+  secondaryKey: "Q",
 } as const;
 
-export const LAST_COL = "N";
+export const LAST_COL = "Q";
 export const FIRST_DATA_ROW = 2;
 
-/** Only the columns the app owns. A..J keep whatever headings you gave them. */
+/** Only the columns the app owns. A..L keep whatever headings you gave them. */
 export const MANAGED_HEADERS: [string, string][] = [
   [COLS.id, "Item ID"],
   [COLS.order, "Board Order"],
   [COLS.assigneeKey, "Assignee Key"],
   [COLS.updatedAt, "Updated At"],
+  [COLS.secondaryKey, "Secondary Key"],
 ];
 
 export const colIndex = (col: string) => col.charCodeAt(0) - 65;
@@ -227,6 +234,15 @@ export function rowToItem(
     );
   }
 
+  const secondName = str(cell(COLS.secondaryPerson));
+  const second = resolveMember(secondName, str(cell(COLS.secondaryKey)));
+  const secondaryAssigneeId = second?.id ?? null;
+  if (secondName && !secondaryAssigneeId) {
+    warnings.push(
+      `Row ${rowNumber}: secondary person "${secondName}" is not on the team list — add them to TEAM in lib/constants.ts`,
+    );
+  }
+
   const id = str(cell(COLS.id));
   const refMatch = /(\d+)\s*$/.exec(id);
   const orderRaw = cell(COLS.order);
@@ -237,7 +253,9 @@ export function rowToItem(
     title: str(cell(COLS.title)) || "(untitled)",
     description: str(cell(COLS.description)),
     assigneeId,
+    secondaryAssigneeId,
     status,
+    notes: str(cell(COLS.notes)),
     createdDate: toIsoDate(cell(COLS.created)),
     startedDate: toIsoDate(cell(COLS.started)),
     plannedDate: toIsoDate(cell(COLS.planned)),
@@ -263,14 +281,17 @@ export function highestRef(items: { id: string }[]): number {
   }, 0);
 }
 
-/** The A..N cells for a whole row, in column order. */
+/** The A..Q cells for a whole row, in column order. */
 export function itemToRow(item: WorkItem): unknown[] {
   const member = TEAM.find((m) => m.id === item.assigneeId);
+  const second = TEAM.find((m) => m.id === item.secondaryAssigneeId);
   return [
     item.title,
     item.description,
     member?.name ?? "", // C stays human-readable for anyone reading the sheet
+    second?.name ?? "", // D likewise
     item.status,
+    item.notes,
     item.createdDate ?? "",
     item.startedDate ?? "",
     item.plannedDate ?? "",
@@ -281,5 +302,6 @@ export function itemToRow(item: WorkItem): unknown[] {
     item.order,
     item.assigneeId ?? "",
     item.updatedAt,
+    item.secondaryAssigneeId ?? "",
   ];
 }
