@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { Providers } from "@/components/providers";
+import { auth } from "@/auth";
 import "./globals.css";
 
 /**
@@ -40,7 +41,11 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Reads the session cookie only — no Sheets call — so the sign-in and
+  // no-access pages still render when the spreadsheet is unreachable.
+  const session = await auth();
+
   return (
     <html
       lang="en"
@@ -48,7 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${mono.variable} ${display.variable} h-full antialiased`}
     >
       <body className="h-full overflow-hidden">
-        <Providers>{children}</Providers>
+        <Providers session={session}>{children}</Providers>
       </body>
     </html>
   );

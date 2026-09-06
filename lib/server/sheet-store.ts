@@ -176,6 +176,13 @@ export async function updateItem(
   patch: Partial<WorkItem>,
   /** When given and the sheet has moved on, the write is refused. */
   expectedUpdatedAt?: string,
+  /**
+   * Runs against the row as it stands, before anything is written, and
+   * throws to refuse the write. Lets the route apply a permission rule that
+   * needs the *current* assignee without paying for a second read — and
+   * keeps this file free of any knowledge of who is signed in.
+   */
+  guard?: (current: WorkItem) => void,
 ): Promise<WorkItem> {
   const c = await ctx();
   const rowNumber = await findRow(c, id);
@@ -186,6 +193,8 @@ export async function updateItem(
 
   const current = rowToItem(row, rowNumber, []);
   if (!current) throw new SheetError(`${id} row is empty.`, 409);
+
+  guard?.(current);
 
   const epoch = new Date(0).toISOString();
   if (
@@ -215,9 +224,24 @@ export async function updateItem(
   return next;
 }
 
-export async function removeItem(id: string): Promise<void> {
+export async function removeItem(
+  id: string,
+  /** Same contract as updateItem's: throw to refuse the delete. Costs one
+   *  extra read, which a delete can afford. */
+  guard?: (current: WorkItem) => void,
+): Promise<void> {
   const c = await ctx();
   const rowNumber = await findRow(c, id);
+
+  if (guard) {
+    const row =
+      (
+        await readRange(c.config, c.tab, `A${rowNumber}:${LAST_COL}${rowNumber}`)
+      )[0] ?? [];
+    const current = rowToItem(row, rowNumber, []);
+    if (current) guard(current);
+  }
+
   await deleteRow(c.config, c.sheetId, rowNumber);
 }
 

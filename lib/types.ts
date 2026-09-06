@@ -86,12 +86,21 @@ export interface Member {
   role: Role;
   /**
    * Work email. Two jobs: matching a Primary Person cell someone typed by
-   * hand, and — since auth — mapping a signed-in Google account to this
-   * person. An address that is not on this list cannot sign in at all.
+   * hand, and mapping a signed-in Google account to this person.
+   *
+   * It is no longer a guest list — anyone holding an @monoedge.in Workspace
+   * account can sign in, and is appended to the Team tab on arrival. Blank
+   * here means a placeholder row waiting to be claimed on first sign-in.
    */
   email?: string;
   /** Colour used for the avatar chip so people are recognisable at a glance. */
   color: string;
+  /**
+   * Revocation that does not need IT. Suspending the Google account is the
+   * real offboarding; this is the switch for taking the tracker away while
+   * leaving the account alone. Undefined counts as active.
+   */
+  active?: boolean;
 }
 
 export type NewWorkItem = Omit<

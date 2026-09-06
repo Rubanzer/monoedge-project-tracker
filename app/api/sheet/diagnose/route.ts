@@ -1,6 +1,7 @@
 import { getVercelOidcToken } from "@vercel/oidc";
 import { getTab, readConfig, readRange, SheetError } from "@/lib/server/sheets";
 import { loadItems } from "@/lib/server/sheet-store";
+import { AuthError, isAdmin, requireMember } from "@/lib/server/session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,6 +39,22 @@ function decodeClaims(jwt: string): { sub?: string; aud?: string } | null {
  * Deliberately reveals no cell contents and no part of the private key.
  */
 export async function GET() {
+  // Admins only. Everything below names the service account, the OIDC
+  // subject Google matches on, and the spreadsheet — a useful map of the
+  // infrastructure for anyone who should not have one.
+  try {
+    const member = await requireMember();
+    if (!isAdmin(member)) {
+      throw new AuthError("Admins only.", 403);
+    }
+  } catch (e) {
+    const err = e as AuthError;
+    return Response.json(
+      { error: err.message ?? "Not allowed", hint: err.hint },
+      { status: err.status ?? 401 },
+    );
+  }
+
   const checks: Check[] = [];
   const add = (c: Check) => checks.push(c);
 
