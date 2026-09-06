@@ -1,13 +1,22 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { Check, ChevronDown, Columns3, Rows3, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { PRIORITY_TOKENS, TYPE_TOKENS } from "@/lib/constants";
 import { useMembers } from "@/lib/store";
@@ -137,6 +146,8 @@ export function FilterBar({
         onToggle={(v) =>
           onFilters({ assigneeIds: toggle(filters.assigneeIds, v) })
         }
+        onSet={(assigneeIds) => onFilters({ assigneeIds })}
+        searchable
       />
 
       <FilterMenu
@@ -151,6 +162,7 @@ export function FilterBar({
         onToggle={(v) =>
           onFilters({ priorities: toggle(filters.priorities, v as Priority) })
         }
+        onSet={(v) => onFilters({ priorities: v as Priority[] })}
       />
 
       <FilterMenu
@@ -163,6 +175,7 @@ export function FilterBar({
         }))}
         selected={filters.types}
         onToggle={(v) => onFilters({ types: toggle(filters.types, v as WorkType) })}
+        onSet={(v) => onFilters({ types: v as WorkType[] })}
       />
 
       {view === "board" && (
@@ -273,6 +286,8 @@ function FilterMenu({
   options,
   selected,
   onToggle,
+  onSet,
+  searchable,
   active,
   badge,
 }: {
@@ -287,13 +302,56 @@ function FilterMenu({
   }[];
   selected: string[];
   onToggle: (v: string) => void;
+  /** Replaces the whole selection at once, for the select-all row. */
+  onSet: (values: string[]) => void;
+  /** A search box. Worth it for people, noise for four priorities. */
+  searchable?: boolean;
   active: number;
   /** Replaces the count badge when a selection needs richer shorthand. */
   badge?: React.ReactNode;
 }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  // Filtered here rather than by cmdk, so the select-all row knows exactly
+  // which options it is talking about.
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter((o) => o.label.toLowerCase().includes(q));
+  }, [options, query]);
+
+  const allShown =
+    shown.length > 0 && shown.every((o) => selected.includes(o.value));
+
+  const toggleShown = () => {
+    const ids = shown.map((o) => o.value);
+    onSet(
+      allShown
+        ? selected.filter((v) => !ids.includes(v))
+        : [...new Set([...selected, ...ids])],
+    );
+  };
+
+  const bulkLabel = allShown
+    ? query
+      ? "Clear these"
+      : "Clear all"
+    : query
+      ? `Select these ${shown.length}`
+      : "Select all";
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        // A stale query would hide most of the list on reopen, with the
+        // reason scrolled out of sight in a closed box.
+        if (!next) setQuery("");
+      }}
+    >
+      <PopoverTrigger asChild>
         <button
           type="button"
           className={cn(
@@ -313,24 +371,57 @@ function FilterMenu({
             ))}
           <ChevronDown className="size-3 opacity-60" />
         </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-52">
-        {options.map((o) => (
-          <DropdownMenuCheckboxItem
-            key={o.value}
-            checked={selected.includes(o.value)}
-            onCheckedChange={() => onToggle(o.value)}
-            onSelect={(e) => e.preventDefault()}
-            className="text-[13px]"
-          >
-            <span className="flex items-center gap-2">
-              {o.leading ??
-                (o.color ? <i className="dot" style={tone(o.color)} /> : null)}
-              {o.label}
-            </span>
-          </DropdownMenuCheckboxItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-56 gap-0 p-0">
+        {/* shouldFilter off: `shown` above is the filter, and it is the
+            list the select-all row acts on. */}
+        <Command shouldFilter={false}>
+          {searchable && (
+            <CommandInput
+              value={query}
+              onValueChange={setQuery}
+              placeholder={`Search ${label.toLowerCase()}`}
+            />
+          )}
+          <CommandList className="p-1">
+            <CommandEmpty className="px-2 py-3 text-[12.5px] text-muted-foreground">
+              No match.
+            </CommandEmpty>
+
+            {options.length > 1 && shown.length > 0 && (
+              <>
+                <CommandGroup>
+                  <CommandItem
+                    onSelect={toggleShown}
+                    className="text-[12.5px] text-muted-foreground"
+                  >
+                    {bulkLabel}
+                  </CommandItem>
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
+
+            <CommandGroup>
+              {shown.map((o) => (
+                <CommandItem
+                  key={o.value}
+                  value={o.value}
+                  onSelect={() => onToggle(o.value)}
+                  data-checked={selected.includes(o.value)}
+                  className="text-[13px]"
+                >
+                  <span className="flex items-center gap-2">
+                    {o.leading ??
+                      (o.color ? <i className="dot" style={tone(o.color)} /> : null)}
+                    {o.label}
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
