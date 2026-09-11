@@ -9,7 +9,7 @@ and the board reads and writes the tracking sheet for the whole team. Until
 then it falls back to a browser-local draft, which is per-person and shared
 with nobody.
 
-The local draft lives in `localStorage` under `monoedge.tracker.items.v2`.
+The local draft lives in `localStorage` under `monoedge.tracker.items.v3`.
 Because that survives a code change, **bump the key in
 [`lib/repositories/local.ts`](lib/repositories/local.ts) and add the old one to
 `DEAD_KEYS` whenever the shape of a `WorkItem` changes** — otherwise everyone

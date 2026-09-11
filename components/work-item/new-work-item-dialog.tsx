@@ -34,6 +34,7 @@ interface Draft {
   priority: Priority;
   type: WorkType | null;
   plannedDate: string | null;
+  storyPoints: number | null;
   notes: string;
 }
 
@@ -90,6 +91,7 @@ function Composer({
     priority: "Medium",
     type: null,
     plannedDate: null,
+    storyPoints: null,
     notes: "",
   });
 
@@ -110,6 +112,7 @@ function Composer({
       notes: draft.notes.trim(),
       priority: draft.priority,
       type: draft.type,
+      storyPoints: draft.storyPoints,
       createdDate: todayIso(),
       startedDate: STARTED_STAGES.includes(draft.status) ? todayIso() : null,
       plannedDate: draft.plannedDate,
@@ -184,6 +187,25 @@ function Composer({
           </Field>
           <Field label="Functionality / Bug">
             <TypeSelect value={draft.type} onChange={(v) => set("type", v)} />
+          </Field>
+          <Field label="Story points">
+            <Input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="e.g. 1, 2, 3, 5"
+              value={draft.storyPoints !== null ? draft.storyPoints : ""}
+              onChange={(e) => {
+                const val = e.target.value.trim();
+                if (!val) {
+                  set("storyPoints", null);
+                } else {
+                  const parsed = parseInt(val, 10);
+                  set("storyPoints", Number.isFinite(parsed) && parsed >= 0 ? parsed : null);
+                }
+              }}
+              className="h-9 bg-card font-mono text-[13px]"
+            />
           </Field>
           <DateField
             label="Planned date"

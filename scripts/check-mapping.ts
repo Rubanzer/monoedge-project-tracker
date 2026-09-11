@@ -4,6 +4,7 @@ import {
   resolveMember,
   rowToItem,
   toIsoDate,
+  toStoryPoints,
 } from "../lib/sheet-mapping";
 import type { Member } from "../lib/types";
 
@@ -30,6 +31,17 @@ check("blank", toIsoDate(""), null);
 check("null", toIsoDate(null), null);
 check("already ISO", toIsoDate("2026-08-23"), "2026-08-23");
 check("garbage text", toIsoDate("sometime next week"), null);
+
+// --- Story points parsing. Must be integer form.
+check("story points integer", toStoryPoints(3), 3);
+check("story points string integer", toStoryPoints("5"), 5);
+check("story points string with suffix", toStoryPoints("8 pts"), 8);
+check("story points zero", toStoryPoints(0), 0);
+check("story points blank", toStoryPoints(""), null);
+check("story points null", toStoryPoints(null), null);
+check("story points negative", toStoryPoints(-2), null);
+check("story points float rounded", toStoryPoints(3.2), 3);
+check("story points garbage", toStoryPoints("tbd"), null);
 
 // --- Status aliases: the sheet's current dropdown must all land somewhere.
 const statusOf = (raw: string) =>
@@ -99,6 +111,7 @@ const item = {
   actualDate: null,
   priority: "High" as const,
   type: "Product Functionality" as const,
+  storyPoints: 5,
   sheetRow: 8,
   order: 3,
   updatedAt: "2026-08-23T10:00:00.000Z",
@@ -118,6 +131,7 @@ check("round trip notes", back?.notes, item.notes);
 check("round trip planned", back?.plannedDate, item.plannedDate);
 check("round trip actual null", back?.actualDate, null);
 check("round trip type", back?.type, item.type);
+check("round trip story points", back?.storyPoints, 5);
 check("round trip order", back?.order, item.order);
 check("round trip updatedAt", back?.updatedAt, item.updatedAt);
 check(
@@ -128,6 +142,7 @@ check(
 check("column O is the stable key", itemToRow(item)[14], "vismay");
 check("column D is the readable secondary name", itemToRow(item)[3], "Tushar");
 check("column Q is the secondary key", itemToRow(item)[16], "tushar");
+check("column R is story points", itemToRow(item)[17], 5);
 
 // --- Reference numbering. A row with no Item ID yet carries a placeholder
 // ref derived from its row number. Counting those as claimed made a fresh
