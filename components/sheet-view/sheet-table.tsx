@@ -15,7 +15,7 @@ import {
   WorkItemRef,
 } from "@/components/shared/badges";
 
-type SortKey = "ref" | "title" | "status" | "planned" | "priority" | "person";
+type SortKey = "ref" | "title" | "status" | "planned" | "priority" | "person" | "points";
 
 const HEADS: { key: SortKey | null; label: string; className?: string }[] = [
   { key: "ref", label: "ID", className: "w-[72px]" },
@@ -31,6 +31,7 @@ const HEADS: { key: SortKey | null; label: string; className?: string }[] = [
   { key: null, label: "Actual", className: "w-[92px]" },
   { key: "priority", label: "Priority", className: "w-[116px]" },
   { key: null, label: "Functionality / Bug", className: "w-[148px]" },
+  { key: "points", label: "Points", className: "w-[84px]" },
 ];
 
 /**
@@ -70,6 +71,8 @@ export function SheetTable({
           return PRIORITIES.indexOf(i.priority);
         case "person":
           return memberOf(i.assigneeId)?.name ?? "zzz";
+        case "points":
+          return i.storyPoints ?? -1;
       }
     };
     return [...items].sort((a, b) => {
@@ -195,6 +198,11 @@ export function SheetTable({
                 </Cell>
                 <Cell>
                   <TypeChip type={item.type} short />
+                </Cell>
+                <Cell mono>
+                  {item.storyPoints !== null && item.storyPoints !== undefined
+                    ? `${item.storyPoints} pt${item.storyPoints === 1 ? "" : "s"}`
+                    : "—"}
                 </Cell>
               </tr>
             );

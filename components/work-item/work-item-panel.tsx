@@ -11,6 +11,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -75,6 +76,11 @@ function PanelBody({
   const [title, setTitle] = useState(item.title);
   const [description, setDescription] = useState(item.description);
   const [notes, setNotes] = useState(item.notes);
+  const [storyPoints, setStoryPoints] = useState(
+    item.storyPoints !== null && item.storyPoints !== undefined
+      ? String(item.storyPoints)
+      : "",
+  );
 
   const patch = (p: Partial<WorkItem>) => onPatch(item.id, p);
   const overdue = isOverdue(item);
@@ -147,6 +153,35 @@ function PanelBody({
           </Field>
           <Field label="Functionality / Bug">
             <TypeSelect value={item.type} onChange={(type) => patch({ type })} />
+          </Field>
+          <Field label="Story points">
+            <Input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="e.g. 1, 2, 3, 5"
+              value={storyPoints}
+              onChange={(e) => setStoryPoints(e.target.value)}
+              onBlur={() => {
+                const trimmed = storyPoints.trim();
+                if (!trimmed) {
+                  if (item.storyPoints !== null) patch({ storyPoints: null });
+                } else {
+                  const parsed = parseInt(trimmed, 10);
+                  if (Number.isFinite(parsed) && parsed >= 0) {
+                    setStoryPoints(String(parsed));
+                    if (parsed !== item.storyPoints) patch({ storyPoints: parsed });
+                  } else {
+                    setStoryPoints(
+                      item.storyPoints !== null && item.storyPoints !== undefined
+                        ? String(item.storyPoints)
+                        : "",
+                    );
+                  }
+                }
+              }}
+              className="h-9 bg-card font-mono text-[13px]"
+            />
           </Field>
         </div>
 

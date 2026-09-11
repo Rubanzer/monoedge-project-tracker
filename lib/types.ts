@@ -67,6 +67,8 @@ export interface WorkItem {
   priority: Priority;
   /** Col L — Functionality / Bug */
   type: WorkType | null;
+  /** Col R — Story Points (integer estimation, null when unestimated) */
+  storyPoints: number | null;
 
   /** 1-based row this item occupies in the sheet. Set by the Sheets adapter
    *  so an update writes back to the right row; undefined until synced. */

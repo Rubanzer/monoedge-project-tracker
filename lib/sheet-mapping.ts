@@ -39,9 +39,10 @@ export const COLS = {
   assigneeKey: "O",
   updatedAt: "P",
   secondaryKey: "Q",
+  storyPoints: "R",
 } as const;
 
-export const LAST_COL = "Q";
+export const LAST_COL = "R";
 export const FIRST_DATA_ROW = 2;
 
 /** Only the columns the app owns. A..L keep whatever headings you gave them. */
@@ -51,6 +52,7 @@ export const MANAGED_HEADERS: [string, string][] = [
   [COLS.assigneeKey, "Assignee Key"],
   [COLS.updatedAt, "Updated At"],
   [COLS.secondaryKey, "Secondary Key"],
+  [COLS.storyPoints, "Story Points"],
 ];
 
 export const colIndex = (col: string) => col.charCodeAt(0) - 65;
@@ -80,6 +82,22 @@ export function toIsoDate(v: unknown): IsoDate | null {
   const parsed = new Date(text);
   if (!Number.isNaN(parsed.getTime())) {
     return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}`;
+  }
+  return null;
+}
+
+export function toStoryPoints(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v === "number" && Number.isFinite(v)) {
+    const rounded = Math.round(v);
+    return rounded >= 0 ? rounded : null;
+  }
+  const text = str(v);
+  if (!text) return null;
+  const match = /^\s*(\d+)/.exec(text);
+  if (match) {
+    const parsed = parseInt(match[1], 10);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
   }
   return null;
 }
@@ -265,6 +283,7 @@ export function rowToItem(
     actualDate: toIsoDate(cell(COLS.actual)),
     priority,
     type,
+    storyPoints: toStoryPoints(cell(COLS.storyPoints)),
     sheetRow: rowNumber,
     order: typeof orderRaw === "number" ? orderRaw : rowNumber,
     updatedAt: str(cell(COLS.updatedAt)) || new Date(0).toISOString(),
@@ -284,7 +303,7 @@ export function highestRef(items: { id: string }[]): number {
   }, 0);
 }
 
-/** The A..Q cells for a whole row, in column order. */
+/** The A..R cells for a whole row, in column order. */
 export function itemToRow(item: WorkItem, team: Member[] = TEAM): unknown[] {
   const member = team.find((m) => m.id === item.assigneeId);
   const second = team.find((m) => m.id === item.secondaryAssigneeId);
@@ -306,5 +325,8 @@ export function itemToRow(item: WorkItem, team: Member[] = TEAM): unknown[] {
     item.assigneeId ?? "",
     item.updatedAt,
     item.secondaryAssigneeId ?? "",
+    item.storyPoints !== null && item.storyPoints !== undefined
+      ? item.storyPoints
+      : "",
   ];
 }

@@ -3,15 +3,14 @@
 import type { TrackerRepository } from "../repository";
 import type { WorkItem } from "../types";
 
-const KEY = "monoedge.tracker.items.v2";
+const KEY = "monoedge.tracker.items.v3";
 
 /**
- * v1 held the sample board and the old nine-status model. Both are gone, but
- * a browser that loaded an earlier build still has those rows cached and will
- * keep showing them. Drop the old key on first read rather than asking anyone
- * to clear site data by hand.
+ * v1 held the sample board and the old nine-status model. v2 held items before
+ * story points were introduced. Drop old keys on first read rather than asking
+ * anyone to clear site data by hand.
  */
-const DEAD_KEYS = ["monoedge.tracker.items.v1"];
+const DEAD_KEYS = ["monoedge.tracker.items.v1", "monoedge.tracker.items.v2"];
 
 function purgeOldVersions() {
   if (typeof window === "undefined") return;

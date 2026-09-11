@@ -92,3 +92,24 @@ export function WorkItemRef({
     </span>
   );
 }
+
+export function StoryPointsBadge({
+  points,
+  className,
+}: {
+  points: number | null | undefined;
+  className?: string;
+}) {
+  if (points === null || points === undefined) return null;
+  return (
+    <span
+      className={cn(
+        "font-mono text-[10px] font-semibold tracking-tight text-foreground/80 tabular bg-muted/80 border border-rule px-1.5 py-0.5 rounded leading-none",
+        className,
+      )}
+      title={`${points} story point${points === 1 ? "" : "s"}`}
+    >
+      {points} pt{points === 1 ? "" : "s"}
+    </span>
+  );
+}

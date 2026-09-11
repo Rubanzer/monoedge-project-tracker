@@ -15,7 +15,7 @@ import { PRIORITY_TOKENS, STATUS_TOKENS, columnForStatus } from "@/lib/constants
 import { formatShort, isDueSoon, isOverdue } from "@/lib/dates";
 import type { Status, WorkItem } from "@/lib/types";
 import { PersonAvatar } from "@/components/shared/person-avatar";
-import { TypeChip, WorkItemRef } from "@/components/shared/badges";
+import { StoryPointsBadge, TypeChip, WorkItemRef } from "@/components/shared/badges";
 import { tone } from "@/components/shared/tone";
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
@@ -93,7 +93,10 @@ export const WorkItemCard = forwardRef<HTMLDivElement, CardProps>(
 
         <div className="space-y-2 py-2.5 pr-3 pl-4">
           <div className="flex items-center justify-between gap-2">
-            <WorkItemRef refNumber={item.ref} />
+            <div className="flex items-center gap-1.5">
+              <WorkItemRef refNumber={item.ref} />
+              <StoryPointsBadge points={item.storyPoints} />
+            </div>
             <span
               className="font-mono text-[10px] font-semibold tracking-[0.1em] uppercase tone-text"
               style={tone(priority.color)}
